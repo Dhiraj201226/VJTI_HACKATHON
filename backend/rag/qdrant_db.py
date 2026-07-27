@@ -60,9 +60,9 @@ def upload_chunks(chunks: list[GRChunk], embeddings: list[list[float]]):
         )
 
 def search_qdrant(query_embedding: list[float], top_k: int = 10):
-    search_result = client.search(
+    search_result = client.query_points(
         collection_name=settings.COLLECTION_NAME,
-        query_vector=query_embedding,
+        query=query_embedding,
         limit=top_k
     )
-    return search_result
+    return search_result.points
