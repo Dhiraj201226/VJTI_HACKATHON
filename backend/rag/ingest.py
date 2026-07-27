@@ -77,9 +77,11 @@ def ingest_pipeline():
                     progress_file.parent.mkdir(parents=True, exist_ok=True)
                     progress_file.write_text(str(max_gr_in_batch))
 
-                    print(
-                        f"✓ Uploaded {uploaded_chunks} chunks (Up to GR {max_gr_in_batch})"
-                    )
+                    uploaded_grs = sorted(list(set(c.gr_no for c in current_batch)))
+                    for gr in uploaded_grs:
+                        print(f"✓ Successfully ingested GR No. {gr}")
+                    
+                    print(f"  -> Total Chunks Uploaded so far: {uploaded_chunks}")
 
                 except Exception as e:
 
@@ -108,6 +110,12 @@ def ingest_pipeline():
                 
                 max_gr_in_batch = max(c.gr_no for c in current_batch)
                 progress_file.write_text(str(max_gr_in_batch))
+
+                uploaded_grs = sorted(list(set(c.gr_no for c in current_batch)))
+                for gr in uploaded_grs:
+                    print(f"✓ Successfully ingested GR No. {gr}")
+                    
+                print(f"  -> Total Chunks Uploaded so far: {uploaded_chunks}")
 
             except Exception as e:
 
