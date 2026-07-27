@@ -8,11 +8,12 @@ def search_pipeline(query: str, top_k: int = 10) -> SearchResponse:
     
     results = []
     for hit in qdrant_results:
+        payload = hit.payload or {}
         results.append(SearchResult(
-            gr_no=hit.payload.get("gr_no", 0),
+            gr_no=payload.get("gr_no", 0),
             score=hit.score,
-            source_file=hit.payload.get("source_file", ""),
-            text=hit.payload.get("text", "")
+            source_file=payload.get("source_file", ""),
+            text=payload.get("text", "")
         ))
         
     return SearchResponse(results=results)
