@@ -33,6 +33,7 @@ def chunk_grs(gr_generator: Generator[ParsedGR, None, None]) -> Generator[GRChun
         for i, chunk_text_str in enumerate(chunks):
             yield GRChunk(
                 gr_no=gr.gr_no,
+                department=gr.department,
                 source_file=gr.source_file,
                 language=gr.language,
                 chunk_id=i + 1,

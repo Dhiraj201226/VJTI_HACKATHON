@@ -3,7 +3,7 @@ from typing import Generator
 from config import settings
 from .models import ParsedGR
 
-def parse_grs(filepath: str = settings.DATASET_PATH) -> Generator[ParsedGR, None, None]:
+def parse_grs(filepath: str = settings.DATASET_PATH, start_from_gr: int = 0) -> Generator[ParsedGR, None, None]:
     if not os.path.exists(filepath):
         raise FileNotFoundError(f"Dataset not found at {filepath}")
     
@@ -11,6 +11,7 @@ def parse_grs(filepath: str = settings.DATASET_PATH) -> Generator[ParsedGR, None
     
     with open(filepath, 'r', encoding='utf-8') as f:
         current_gr_no = None
+        current_dept = None
         current_source = None
         current_content = []
         state = "SEARCHING"
@@ -25,9 +26,10 @@ def parse_grs(filepath: str = settings.DATASET_PATH) -> Generator[ParsedGR, None
                     state = "IN_CONTENT"
                 elif state == "IN_CONTENT":
                     # Reached the delimiter of the NEXT GR
-                    if current_gr_no is not None:
+                    if current_gr_no is not None and current_gr_no > start_from_gr:
                         yield ParsedGR(
                             gr_no=current_gr_no,
+                            department=current_dept or "Unknown",
                             source_file=current_source or "",
                             language="en",
                             content="".join(current_content).strip()
@@ -35,6 +37,7 @@ def parse_grs(filepath: str = settings.DATASET_PATH) -> Generator[ParsedGR, None
                     
                     # Reset for next GR
                     current_gr_no = None
+                    current_dept = None
                     current_source = None
                     current_content = []
                     state = "IN_HEADER"
@@ -48,18 +51,24 @@ def parse_grs(filepath: str = settings.DATASET_PATH) -> Generator[ParsedGR, None
                             current_gr_no = int(parts[1].strip())
                         except ValueError:
                             current_gr_no = 0
+                elif line_stripped.startswith("Department"):
+                    parts = line_stripped.split(":", 1)
+                    if len(parts) > 1:
+                        current_dept = parts[1].strip()
                 elif line_stripped.startswith("Source File"):
                     parts = line_stripped.split(":", 1)
                     if len(parts) > 1:
                         current_source = parts[1].strip()
                         
             elif state == "IN_CONTENT":
-                current_content.append(line)
+                if current_gr_no is not None and current_gr_no > start_from_gr:
+                    current_content.append(line)
                 
         # Yield the very last GR
-        if state == "IN_CONTENT" and current_gr_no is not None:
+        if state == "IN_CONTENT" and current_gr_no is not None and current_gr_no > start_from_gr:
             yield ParsedGR(
                 gr_no=current_gr_no,
+                department=current_dept or "Unknown",
                 source_file=current_source or "",
                 language="en",
                 content="".join(current_content).strip()

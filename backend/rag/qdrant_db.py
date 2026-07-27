@@ -30,15 +30,22 @@ def init_collection():
 # Ensure collection is created upon module import
 init_collection()
 
+info = client.get_collection(settings.COLLECTION_NAME)
+print("=" * 50)
+print("Collection:", settings.COLLECTION_NAME)
+print("Points Count:", info.points_count)
+print("=" * 50)
+
 def upload_chunks(chunks: list[GRChunk], embeddings: list[list[float]]):
     """Uploads a batch of chunks to Qdrant."""
     points = []
     
     for chunk, embedding in zip(chunks, embeddings):
-        point_id = str(uuid.uuid4())
+        point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{chunk.gr_no}-{chunk.chunk_id}"))
         
         payload = {
             "gr_no": chunk.gr_no,
+            "department": chunk.department,
             "source_file": chunk.source_file,
             "language": chunk.language,
             "chunk_id": chunk.chunk_id,

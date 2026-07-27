@@ -11,6 +11,7 @@ def search_pipeline(query: str, top_k: int = 10) -> SearchResponse:
         payload = hit.payload or {}
         results.append(SearchResult(
             gr_no=payload.get("gr_no", 0),
+            department=payload.get("department", "Unknown"),
             score=hit.score,
             source_file=payload.get("source_file", ""),
             text=payload.get("text", "")

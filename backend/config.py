@@ -15,7 +15,7 @@ class Config:
     # Qdrant Settings
     QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
     QDRANT_PORT = int(os.getenv("QDRANT_PORT", 6333))
-    QDRANT_MEMORY_ONLY = os.getenv("QDRANT_MEMORY_ONLY", "True").lower() == "true"
+    QDRANT_MEMORY_ONLY = os.getenv("QDRANT_MEMORY_ONLY", "False").lower() == "true"
     QDRANT_LOCAL_PATH = os.getenv("QDRANT_LOCAL_PATH", "./data/qdrant")
     COLLECTION_NAME = "government_resolutions"
     
