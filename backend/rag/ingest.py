@@ -17,10 +17,10 @@ def ingest_pipeline():
     """
 
     print("=" * 60)
-    print("🚀 INGESTION STARTED")
-    print("=" * 60)
+    logger.info("Starting ingestion pipeline...")
 
-    progress_file = Path("backend/data/ingest_progress.txt")
+    BASE_DIR = Path(__file__).parent.parent
+    progress_file = BASE_DIR / "data" / "ingest_progress.txt"
     start_from_gr = 0
 
     if progress_file.exists():
