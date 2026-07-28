@@ -20,7 +20,7 @@ def balance_dataset():
             if line.startswith("GR No. :"):
                 if buffer:
                     # Decide whether to keep the previous GR
-                    if dept_counts[current_dept] < 200:
+                    if dept_counts[current_dept] < 80:
                         fout.writelines(buffer)
                         dept_counts[current_dept] += 1
                         kept_count += 1
@@ -41,7 +41,7 @@ def balance_dataset():
                 
         # Process the last GR
         if buffer:
-            if dept_counts[current_dept] < 200:
+            if dept_counts[current_dept] < 80:
                 fout.writelines(buffer)
                 dept_counts[current_dept] += 1
                 kept_count += 1
