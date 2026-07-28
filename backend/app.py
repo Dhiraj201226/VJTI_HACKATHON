@@ -1,4 +1,5 @@
 from fastapi import FastAPI, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
 from rag.models import SearchRequest, SearchResponse, ChatRequest, ChatResponse
 from rag.search import search_pipeline
 from rag.ingest import ingest_pipeline
@@ -7,6 +8,15 @@ from rag.llm import generate_answer
 from config import settings
 
 app = FastAPI(title=settings.PROJECT_NAME)
+
+# CORS configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.post("/ingest")
