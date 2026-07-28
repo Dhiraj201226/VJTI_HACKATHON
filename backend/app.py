@@ -1,8 +1,9 @@
 from fastapi import FastAPI, BackgroundTasks
-from rag.models import SearchRequest, SearchResponse
+from rag.models import SearchRequest, SearchResponse, ChatRequest, ChatResponse
 from rag.search import search_pipeline
 from rag.ingest import ingest_pipeline
 from rag.qdrant_db import client
+from rag.llm import generate_answer
 from config import settings
 
 app = FastAPI(title=settings.PROJECT_NAME)
@@ -26,3 +27,8 @@ def qdrant_status():
 @app.post("/search", response_model=SearchResponse)
 def search_grs(request: SearchRequest):
     return search_pipeline(request.query)
+
+
+@app.post("/chat", response_model=ChatResponse)
+def chat(request: ChatRequest):
+    return generate_answer(request.query, request.top_k)

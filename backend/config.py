@@ -23,6 +23,10 @@ class Config:
     # Embedding Model Settings
     EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME", "BAAI/bge-m3")
     
+    # Groq LLM Settings
+    GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+    GROQ_MODEL = os.getenv("GROQ_MODEL", "llama3-70b-8192")
+    
     # Chunking Settings
     CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", 600))
     CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", 100))

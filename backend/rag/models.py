@@ -24,6 +24,14 @@ class QdrantPayload(BaseModel):
     chunk_id: int
     text: str
 
+class ChatRequest(BaseModel):
+    query: str
+    top_k: int = 5
+
+class ChatResponse(BaseModel):
+    answer: str
+    sources: List[SearchResult]
+
 class SearchRequest(BaseModel):
     query: str
 
