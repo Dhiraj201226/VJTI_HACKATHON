@@ -10,7 +10,7 @@ class Config:
     API_V1_STR = "/api/v1"
     
     # Dataset
-    DATASET_PATH = os.getenv("DATASET_PATH", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "mahGRs", "GR_combine", "english_all_balanced.txt"))
+    DATASET_PATH = os.getenv("DATASET_PATH", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "mahGRs", "GR_combine", "english_all_mapped.txt"))
     
     # Qdrant Settings
     QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
