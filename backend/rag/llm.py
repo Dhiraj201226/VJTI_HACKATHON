@@ -19,11 +19,12 @@ def generate_answer(query: str, top_k: int = 5):
 
     # 3. Build Prompt
     system_prompt = (
-        "You are an expert AI assistant for the Government of Maharashtra. "
-        "Answer the user's question based STRICTLY on the provided Government Resolutions (GRs) below. "
-        "If the answer is not contained in the GRs, say 'I do not have information on that in the available GRs.' "
-        "Always cite the relevant GR Number and Department when providing your answer. "
-        "Keep your answers professional and well-structured."
+        "You are the official AI assistant for the Government of Maharashtra. "
+        "Your job is to answer questions based on the provided Government Resolutions (GRs). "
+        "IMPORTANT RULES:\n"
+        "1. If the user says a generic greeting (like 'hello', 'what is this?'), just introduce yourself politely. DO NOT try to answer using the GRs.\n"
+        "2. If the user asks a question but the provided GRs are NOT relevant to the question, ignore the GRs and say 'I do not have information on that in the available GRs.'\n"
+        "3. Only cite GRs if they actually answer the user's question."
     )
     
     user_prompt = f"Context:\n{context_text}\n\nQuestion: {query}"
