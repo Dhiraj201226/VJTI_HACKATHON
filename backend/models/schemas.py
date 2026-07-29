@@ -44,8 +44,12 @@ class LLMDraftResponse(BaseModel):
     references: List[Reference]
     conflicts: List[Conflict]
     template_fields: TemplateFields
+    phase2_analysis: Optional[Dict[str, Any]] = None
 
 class FinalDraftResponse(BaseModel):
     docx_url: str
     pdf_url: str
     json_data: LLMDraftResponse
+
+class FAQRequest(BaseModel):
+    question: str

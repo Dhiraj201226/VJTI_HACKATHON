@@ -79,7 +79,7 @@ def ingest_pipeline():
 
                     uploaded_grs = sorted(list(set(c.gr_no for c in current_batch)))
                     for gr in uploaded_grs:
-                        print(f"✓ Successfully ingested GR No. {gr}")
+                        print(f"SUCCESS: Successfully ingested GR No. {gr}")
                     
                     print(f"  -> Total Chunks Uploaded so far: {uploaded_chunks}")
 
@@ -88,7 +88,7 @@ def ingest_pipeline():
                     skipped_batches += 1
 
                     print("\n" + "=" * 60)
-                    print("❌ ERROR DURING BATCH")
+                    print("ERROR DURING BATCH")
                     print(e)
                     traceback.print_exc()
                     print("=" * 60 + "\n")
@@ -113,7 +113,7 @@ def ingest_pipeline():
 
                 uploaded_grs = sorted(list(set(c.gr_no for c in current_batch)))
                 for gr in uploaded_grs:
-                    print(f"✓ Successfully ingested GR No. {gr}")
+                    print(f"SUCCESS: Successfully ingested GR No. {gr}")
                     
                 print(f"  -> Total Chunks Uploaded so far: {uploaded_chunks}")
 
@@ -124,7 +124,7 @@ def ingest_pipeline():
                 traceback.print_exc()
 
         print("\n" + "=" * 60)
-        print("✅ INGESTION FINISHED")
+        print("INGESTION FINISHED")
         print("=" * 60)
         print(f"Total GRs Processed : {len(processed_grs)}")
         print(f"Total Chunks Uploaded : {uploaded_chunks}")
@@ -140,7 +140,7 @@ def ingest_pipeline():
     except Exception as e:
 
         print("\n" + "=" * 60)
-        print("💥 INGESTION CRASHED")
+        print("INGESTION CRASHED")
         print(e)
         traceback.print_exc()
         print("=" * 60)

@@ -6,8 +6,15 @@ from rag.ingest import ingest_pipeline
 from rag.qdrant_db import client
 from rag.llm import generate_answer
 from config import settings
+from api.routes import router as api_router
+from db.database import engine
+from db import models
+
+# Create database tables
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title=settings.PROJECT_NAME)
+app.include_router(api_router, prefix="/api")
 
 # CORS configuration
 app.add_middleware(
@@ -41,4 +48,4 @@ def search_grs(request: SearchRequest):
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
-    return generate_answer(request.query, request.top_k)
+    return generate_answer(request.query, request.top_k, request.history)

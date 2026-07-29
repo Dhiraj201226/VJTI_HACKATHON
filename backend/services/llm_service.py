@@ -91,3 +91,29 @@ def generate_gr_json(objective: str, retrieved_chunks: dict, officer_decisions: 
     
     # Validate and return using Pydantic
     return LLMDraftResponse(**parsed_json)
+
+def answer_faq(question: str) -> str:
+    prompt = f"""
+You are the AI Assistant for MAHA-GR ALIGN, a portal for drafting Government Resolutions (GRs) for the Government of Maharashtra.
+Your job is to answer user questions about how the platform works.
+Keep your answers concise, helpful, and professional.
+
+System Context:
+- MAHA-GR ALIGN uses RAG (Retrieval-Augmented Generation) to search past GRs.
+- It detects semantic conflicts and duplicate funding.
+- It verifies references against a Qdrant vector database.
+- It suggests official bilingual terminology.
+- It generates legally compliant PDFs and DOCXs.
+
+User Question: {question}
+"""
+    response = client.chat.completions.create(
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant for MAHA-GR ALIGN."},
+            {"role": "user", "content": prompt}
+        ],
+        model=settings.LLM_MODEL,
+        temperature=0.3
+    )
+    return response.choices[0].message.content
+

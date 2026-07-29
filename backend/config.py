@@ -13,7 +13,7 @@ class Config:
     DATASET_PATH = os.getenv("DATASET_PATH", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "mahGRs", "GR_combine", "english_all_mapped.txt"))
     
     # Qdrant Settings
-    QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
+    QDRANT_HOST = os.getenv("QDRANT_HOST", "127.0.0.1")
     QDRANT_PORT = int(os.getenv("QDRANT_PORT", 6333))
     QDRANT_MEMORY_ONLY = os.getenv("QDRANT_MEMORY_ONLY", "False").lower() == "true"
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -25,7 +25,8 @@ class Config:
     
     # Groq LLM Settings
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-    GROQ_MODEL = os.getenv("GROQ_MODEL", "llama3-70b-8192")
+    GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
     
     # Chunking Settings
     CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", 600))

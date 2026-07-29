@@ -110,7 +110,13 @@ By order and in the name of the Governor of Maharashtra,
 {fields.footer}
 """
     # Use insert_textbox with a Rect to allow text wrapping instead of insert_text
-    rect = fitz.Rect(50, 50, 545, 792)  # A4 margins
+    # Insert Logo
+    logo_path = os.path.join("data", "logo.png")
+    if os.path.exists(logo_path):
+        logo_rect = fitz.Rect(260, 20, 335, 95)  # Center top
+        page.insert_image(logo_rect, filename=logo_path)
+    
+    rect = fitz.Rect(50, 110, 545, 792)  # A4 margins, shifted down for logo
     page.insert_textbox(rect, text, fontsize=10, fontname="helv")
     pdf.save(pdf_path)
     

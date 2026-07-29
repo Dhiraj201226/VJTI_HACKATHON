@@ -1,15 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { checkLegalCompliance } from '../api/client';
 
 export default function DocumentPreview({ draftState }) {
   const navigate = useNavigate();
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [legalResult, setLegalResult] = useState(null);
   const { finalResult } = draftState;
 
   if (!finalResult) {
     return (
       <div className="text-center mt-10">
-        <p className="text-xl text-gray-600 mb-4">No document generated yet.</p>
-        <button onClick={() => navigate('/')} className="text-blue-600 underline">Go back</button>
+        <p className="text-xl text-on-surface-variant mb-4">No document generated yet.</p>
+        <button onClick={() => navigate('/')} className="text-primary underline">Go back</button>
       </div>
     );
   }
@@ -18,109 +21,228 @@ export default function DocumentPreview({ draftState }) {
   const fields = json_data.template_fields;
   const baseUrl = "http://localhost:8000"; // Should be env var
 
-  return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100">
-        <div className="flex justify-between items-start mb-8 border-b pb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Document Generated Successfully</h2>
-            <p className="text-gray-600">The AI has drafted the Government Resolution based on your objective.</p>
-          </div>
-          <div className="flex gap-4">
-            <a 
-              href={`${baseUrl}${docx_url}`} 
-              download
-              className="flex items-center gap-2 bg-blue-100 text-blue-700 hover:bg-blue-200 px-4 py-2 rounded-lg font-semibold transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-              Download DOCX
-            </a>
-            <a 
-              href={`${baseUrl}${pdf_url}`} 
-              download
-              className="flex items-center gap-2 bg-red-100 text-red-700 hover:bg-red-200 px-4 py-2 rounded-lg font-semibold transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-              Download PDF
-            </a>
-          </div>
-        </div>
+  const handleLegalReview = async () => {
+    setIsReviewing(true);
+    setLegalResult(null);
+    try {
+      const result = await checkLegalCompliance(json_data);
+      setLegalResult(result);
+    } catch (error) {
+      console.error("Legal review failed:", error);
+      setLegalResult({ is_valid: false, violations: ["Error connecting to Legal API"] });
+    } finally {
+      setIsReviewing(false);
+    }
+  };
 
-        <div className="grid md:grid-cols-3 gap-8">
-          {/* Preview Panel */}
-          <div className="md:col-span-2 bg-gray-50 p-8 rounded-lg border border-gray-200 shadow-inner font-serif">
-            <div className="text-center mb-6">
-              <h1 className="font-bold text-xl uppercase underline">GOVERNMENT OF MAHARASHTRA</h1>
-              <p className="mt-2 font-semibold">Department: {fields.department}</p>
-              <p>Government Resolution No.: {fields.gr_number}</p>
-              <p>Date: {fields.date}</p>
+  return (
+    <div className="flex flex-col flex-1 h-full -m-6">
+      {/* TopNavBar Replacement (Inline for Editor) */}
+      <header className="bg-surface-container-highest flex justify-between items-center px-gutter py-stack-sm w-full border-b border-outline-variant z-10">
+        <div className="flex items-center gap-4">
+          <span className="text-on-surface-variant font-medium font-body-md">Draft Editor</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <a 
+            href={`${baseUrl}${docx_url}`} download
+            className="bg-white border border-outline-variant px-4 py-2 rounded text-body-sm font-medium hover:bg-surface-container-high transition-all flex items-center gap-2"
+          >
+            <span className="material-symbols-outlined text-lg">download</span> Download DOCX
+          </a>
+          <a 
+            href={`${baseUrl}${pdf_url}`} download
+            className="bg-primary text-white px-6 py-2 rounded text-body-sm font-bold hover:brightness-110 transition-all flex items-center gap-2"
+          >
+            <span className="material-symbols-outlined text-lg">picture_as_pdf</span> Download PDF
+          </a>
+        </div>
+      </header>
+
+      {/* Workspace */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Editor Panel (70%) */}
+        <section className="w-full lg:w-[70%] overflow-y-auto p-8 flex flex-col items-center">
+          <div className="bg-white shadow-md border border-outline-variant w-[210mm] min-h-[297mm] p-[25mm] font-document-text text-on-surface leading-relaxed text-lg">
+            {/* Header */}
+            <div className="text-center mb-12">
+              <img className="w-16 h-16 mx-auto mb-4 object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmo0MjyHYoX5jRhX7RDGVXen8paQIhImmLlh87xD7CQdJSaqS8305l7BPhZvugp2MUH7ikvjU_ZG1hg2d7Qk2thkNVTPVdwRZLwmbQjwfsNXzBGTXjSR-MpR8_Jb4er0nF1zBF3_XzTVnSb8bdKFW-0AFxf0ieIxRXybKjFsBK7cNbxn_m7YdoVYGpp4_tJfX1VQpvrrwCbNtt20ZIvEaKvuQHVk28Xzax3OU3YOpayJ2BHWIFZjwQD3M41npIm5BqoQ" alt="Emblem" />
+              <h2 className="text-xl font-bold uppercase tracking-wide">Government of Maharashtra</h2>
+              <h3 className="text-lg font-bold">{fields.department}</h3>
+              <div className="w-32 h-px bg-black mx-auto my-4"></div>
+              <h4 className="text-md font-bold mb-6">Government Resolution No: {fields.gr_number || "___-202X/CR-___/AD-__"}</h4>
+              <p className="text-right">Mantralaya, Mumbai 400 032<br/>Date: {fields.date || new Date().toLocaleDateString()}</p>
             </div>
-            
-            <div className="mb-6">
-              <h2 className="font-bold underline mb-2">Subject:</h2>
-              <p className="pl-4">{fields.subject}</p>
+
+            {/* Subject */}
+            <div className="mb-8">
+              <p className="font-bold inline">Subject: </p>
+              <div className="inline-block outline-none min-w-[200px]" contentEditable="true">
+                {fields.subject}
+              </div>
             </div>
-            
-            <div className="mb-6">
-              <h2 className="font-bold underline mb-2">References:</h2>
-              <ul className="list-disc pl-8">
-                {fields.references.map((ref, idx) => (
-                  <li key={idx} className="mb-1">{ref}</li>
-                ))}
-              </ul>
-            </div>
-            
-            <div className="mb-6">
-              <h2 className="font-bold underline mb-2">Resolution:</h2>
-              {fields.body.map((para, idx) => (
-                <p key={idx} className="mb-3 text-justify indent-8">{para}</p>
-              ))}
-            </div>
-            
-            <div className="mb-6">
-              <h2 className="font-bold underline mb-2">Clauses:</h2>
-              {fields.clauses.map((clause, idx) => (
-                <p key={idx} className="mb-3 pl-4">{clause}</p>
-              ))}
-            </div>
-            
-            <div className="mb-6">
-              <h2 className="font-bold underline mb-2">Financial Implications:</h2>
-              <p className="pl-4">{fields.financial_implications}</p>
-            </div>
-            
-            <div className="mt-12 text-right">
-              <p>By order and in the name of the Governor of Maharashtra,</p>
-              <br/><br/>
-              <p className="font-bold">{fields.signature}</p>
-              <p>{fields.designation}</p>
-            </div>
-          </div>
-          
-          {/* Metadata Panel */}
-          <div className="space-y-6">
-            <div className="bg-blue-50 p-6 rounded-lg border border-blue-100">
-              <h3 className="font-bold text-blue-900 mb-4 border-b border-blue-200 pb-2">AI Extraction Metadata</h3>
-              <div className="space-y-3 text-sm">
-                <div>
-                  <span className="font-semibold text-blue-800 block">Identified References:</span>
-                  <span className="text-gray-700">{json_data.references.length} documents linked</span>
+
+            {/* Sections */}
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <h5 className="font-bold underline uppercase">Reference:</h5>
+                <div className="min-h-[40px] outline-none" contentEditable="true">
+                  {fields.references?.map((ref, idx) => (
+                    <div key={idx}>{idx + 1}. {ref}</div>
+                  ))}
                 </div>
-                <div>
-                  <span className="font-semibold text-blue-800 block">Conflicts Resolved:</span>
-                  <span className="text-gray-700">{json_data.conflicts.length} policies aligned</span>
+              </div>
+
+              <div className="space-y-2">
+                <h5 className="font-bold underline uppercase">Background:</h5>
+                <div className="min-h-[80px] outline-none" contentEditable="true">
+                  {fields.body?.map((para, idx) => (
+                    <p key={idx} className="mb-2 text-justify">{para}</p>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h5 className="font-bold underline uppercase">Government Resolution:</h5>
+                <div className="min-h-[150px] outline-none" contentEditable="true">
+                  <ol className="list-decimal ml-6 space-y-2">
+                    {fields.clauses?.map((clause, idx) => (
+                      <li key={idx} className="text-justify">{clause}</li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
+
+              <div className="py-4">
+                <h5 className="font-bold text-sm text-gray-600">Financial Implications:</h5>
+                <div className="p-1 outline-none" contentEditable="true">{fields.financial_implications}</div>
+              </div>
+
+              <div className="pt-12 text-right">
+                <p className="font-bold">By order and in the name of the Governor of Maharashtra,</p>
+                <div className="mt-16">
+                  <p className="font-bold border-t border-black inline-block pt-1 px-8">({fields.signature})</p>
+                  <p>{fields.designation}</p>
                 </div>
               </div>
             </div>
-            
+          </div>
+          <div className="text-center text-on-surface-variant font-label-caps opacity-50 my-10 uppercase tracking-widest">
+              Achuk Nirnay, Pragat Maharashtra
+          </div>
+        </section>
+
+        {/* AI Assistant Panel (30%) */}
+        <aside className="hidden lg:block w-[30%] bg-surface-container border-l border-outline-variant overflow-y-auto">
+          <div className="p-6 space-y-stack-lg">
+            <header className="flex items-center justify-between">
+              <h3 className="font-h3 text-primary flex items-center gap-2">
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
+                AI Assistant
+              </h3>
+              <span className="bg-primary-container/20 text-primary px-2 py-1 rounded text-[10px] font-bold uppercase">v2.4 Active</span>
+            </header>
+
+            {/* Legal Advisor Section */}
+            <div className="bg-white rounded-lg p-4 border border-outline-variant shadow-sm space-y-4">
+              <h4 className="font-label-caps text-on-surface-variant">Constitutional & Legal Check</h4>
+              <p className="text-body-sm text-on-surface-variant">
+                Verify if this drafted GR violates any Indian laws or constitutional principles using the AI Legal Advisor.
+              </p>
+              <button 
+                onClick={handleLegalReview}
+                disabled={isReviewing}
+                className="w-full bg-primary hover:bg-primary-container text-white font-bold py-2 px-4 rounded transition-colors text-sm flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-lg">gavel</span>
+                {isReviewing ? "Reviewing..." : "Run Legal Review"}
+              </button>
+
+              {legalResult && (
+                <div className={`mt-4 p-4 rounded-lg border ${legalResult.is_valid ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                  <h5 className={`font-bold flex items-center gap-2 ${legalResult.is_valid ? 'text-green-700' : 'text-red-700'}`}>
+                    <span className="material-symbols-outlined">
+                      {legalResult.is_valid ? "check_circle" : "warning"}
+                    </span>
+                    {legalResult.is_valid ? "Constitutionally Valid" : "Potential Violations Found"}
+                  </h5>
+                  {!legalResult.is_valid && legalResult.violations && legalResult.violations.length > 0 && (
+                    <ul className="list-disc ml-5 mt-2 text-sm text-red-600">
+                      {legalResult.violations.map((v, i) => <li key={i}>{v}</li>)}
+                    </ul>
+                  )}
+                  <p className="text-xs mt-3 text-on-surface-variant leading-relaxed">
+                    <strong>Analysis:</strong> {legalResult.analysis}
+                  </p>
+                  <p className="text-xs mt-2 text-on-surface-variant leading-relaxed">
+                    <strong>Recommendation:</strong> {legalResult.recommendation}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Phase 2 Analysis */}
+            <div className="space-y-4 border-t border-outline-variant pt-4 mt-4">
+              <h4 className="font-label-caps text-on-surface-variant">AI Quality Assurance</h4>
+              
+              {/* Terminology */}
+              {json_data.phase2_analysis?.terminology?.length > 0 && (
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded-r-lg">
+                  <p className="text-body-sm text-yellow-800 font-bold mb-1 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-sm">spellcheck</span> Terminology Suggestions
+                  </p>
+                  <ul className="text-xs text-yellow-700 space-y-1 list-disc ml-4">
+                    {json_data.phase2_analysis.terminology.map((term, i) => (
+                      <li key={i}>
+                        Found: <strong>"{term.found}"</strong> → Suggestion: <strong>"{term.suggestion}"</strong>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Template Warnings */}
+              {json_data.phase2_analysis?.template_warnings?.length > 0 && (
+                <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded-r-lg">
+                  <p className="text-body-sm text-red-800 font-bold mb-1 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-sm">error</span> Template Warnings
+                  </p>
+                  <ul className="text-xs text-red-700 space-y-1 list-disc ml-4">
+                    {json_data.phase2_analysis.template_warnings.map((warn, i) => (
+                      <li key={i}>{warn}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* References Verification */}
+              <div className="bg-blue-50 border-l-4 border-blue-500 p-3 rounded-r-lg">
+                <p className="text-body-sm text-blue-800 font-bold mb-1 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm">library_books</span> Reference Check
+                </p>
+                <p className="text-xs text-blue-700">
+                  Verified: <strong>{json_data.phase2_analysis?.references?.verified_references?.length || 0}</strong>
+                </p>
+                {json_data.phase2_analysis?.references?.missing_references?.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-blue-200">
+                    <p className="text-xs text-red-600 font-bold">Unverified / Missing:</p>
+                    <ul className="text-xs text-red-600 list-disc ml-4">
+                      {json_data.phase2_analysis.references.missing_references.map((miss, i) => (
+                        <li key={i}>{miss}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <button 
-              onClick={() => navigate('/')}
-              className="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-4 rounded-lg transition-colors text-center"
+              onClick={() => navigate('/create')}
+              className="w-full mt-4 bg-surface-container-highest hover:bg-outline-variant text-on-surface font-bold py-3 px-4 rounded-lg transition-colors text-center text-sm"
             >
               Start New Draft
             </button>
           </div>
-        </div>
+        </aside>
       </div>
     </div>
   );

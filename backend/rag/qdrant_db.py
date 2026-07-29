@@ -9,8 +9,7 @@ from .models import GRChunk
 if settings.QDRANT_MEMORY_ONLY:
     client = QdrantClient(":memory:")
 else:
-    os.makedirs(settings.QDRANT_LOCAL_PATH, exist_ok=True)
-    client = QdrantClient(path=settings.QDRANT_LOCAL_PATH)
+    client = QdrantClient(host=settings.QDRANT_HOST, port=settings.QDRANT_PORT, timeout=60.0)
 
 def init_collection():
     """Ensures the collection exists."""

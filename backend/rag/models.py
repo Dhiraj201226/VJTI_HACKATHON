@@ -24,8 +24,20 @@ class QdrantPayload(BaseModel):
     chunk_id: int
     text: str
 
+class SearchResult(BaseModel):
+    gr_no: int
+    department: str
+    score: float
+    source_file: str
+    text: str
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
 class ChatRequest(BaseModel):
     query: str
+    history: List[ChatMessage] = []
     top_k: int = 5
 
 class ChatResponse(BaseModel):
@@ -34,13 +46,6 @@ class ChatResponse(BaseModel):
 
 class SearchRequest(BaseModel):
     query: str
-
-class SearchResult(BaseModel):
-    gr_no: int
-    department: str
-    score: float
-    source_file: str
-    text: str
 
 class SearchResponse(BaseModel):
     results: List[SearchResult]

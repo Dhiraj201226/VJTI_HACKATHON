@@ -5,7 +5,7 @@ export default function Chat() {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: 'Namaskar! I am your AI assistant for Maharashtra Government Resolutions. How can I help you today?',
+      content: 'Namaskar! I am your AI Legal Advisor for Maharashtra Government Resolutions. How can I assist you with legal queries or policy clarifications today?',
       sources: []
     }
   ]);
@@ -31,8 +31,14 @@ export default function Chat() {
     setLoading(true);
 
     try {
+      const historyPayload = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
       const res = await axios.post('http://localhost:8000/chat', {
         query: userMessage.content,
+        history: historyPayload,
         top_k: 5
       });
       
@@ -55,87 +61,150 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex flex-col h-[80vh] max-h-[800px] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden relative">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-900 to-blue-700 text-white p-4 flex items-center shadow-md z-10">
-        <div className="bg-yellow-500 w-10 h-10 rounded-full flex items-center justify-center font-bold text-blue-900 mr-4 shadow-sm">
-          MH
-        </div>
+    <div className="flex flex-col h-[calc(100vh-6rem)] -m-6 max-h-[900px] bg-background">
+      {/* Header Section */}
+      <header className="px-gutter py-stack-md border-b border-outline-variant bg-surface flex flex-col md:flex-row md:items-end justify-between gap-stack-md">
         <div>
-          <h2 className="text-lg font-bold">Maha-GR AI Assistant</h2>
-          <p className="text-xs text-blue-100 opacity-90">Powered by Groq & Qdrant</p>
+          <div className="flex items-center gap-2 mb-2">
+            <h1 className="font-h1 text-h1 text-on-surface">AI Legal Advisor</h1>
+            <span className="bg-primary-container/10 text-primary px-3 py-1 rounded-full text-body-sm font-bold border border-primary-container/20 flex items-center gap-1">
+              <span className="material-symbols-outlined text-[14px]">psychology</span>
+              AI Advisory Module
+            </span>
+          </div>
+          <p className="text-on-surface-variant font-body-lg text-body-lg max-w-3xl">
+            Query the archive of Maharashtra GRs for legal precedents, rules, and policy clarifications.
+          </p>
         </div>
-      </div>
+      </header>
 
-      {/* Chat History */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/50">
-        {messages.map((msg, index) => (
-          <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div 
-              className={`max-w-[80%] rounded-2xl p-4 shadow-sm ${
-                msg.role === 'user' 
-                  ? 'bg-blue-600 text-white rounded-tr-sm' 
-                  : 'bg-white border border-gray-200 text-gray-800 rounded-tl-sm'
-              }`}
-            >
-              <div className="whitespace-pre-wrap">{msg.content}</div>
-              
-              {/* Citations / Sources */}
-              {msg.sources && msg.sources.length > 0 && (
-                <div className="mt-4 pt-3 border-t border-gray-200">
-                  <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wider">Sources Consulted:</p>
-                  <div className="flex flex-col gap-2">
-                    {msg.sources.map((source, idx) => (
-                      <div key={idx} className="bg-gray-50 p-2 rounded text-xs border border-gray-100">
-                        <span className="font-bold text-blue-700">GR {source.gr_no}</span> 
-                        <span className="text-gray-500 mx-1">•</span> 
-                        <span className="font-medium text-gray-600">{source.department}</span>
-                      </div>
-                    ))}
+      {/* Main Chat Area */}
+      <div className="flex-1 flex overflow-hidden">
+        
+        {/* Chat Interface */}
+        <div className="flex-1 flex flex-col bg-surface-container-lowest">
+          <div className="flex-1 overflow-y-auto p-gutter space-y-6 custom-scrollbar">
+            {messages.map((msg, index) => (
+              <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                {msg.role === 'assistant' && (
+                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center mr-3 mt-1 shrink-0">
+                    <span className="material-symbols-outlined text-white text-[16px]">gavel</span>
                   </div>
+                )}
+                <div 
+                  className={`max-w-[85%] rounded-2xl p-5 shadow-sm font-body-md leading-relaxed ${
+                    msg.role === 'user' 
+                      ? 'bg-primary text-white rounded-tr-sm' 
+                      : 'bg-surface border border-outline-variant text-on-surface rounded-tl-sm'
+                  }`}
+                >
+                  <div className="whitespace-pre-wrap">{msg.content}</div>
+                  
+                  {/* Citations / Sources */}
+                  {msg.sources && msg.sources.length > 0 && (
+                    <div className="mt-5 pt-4 border-t border-outline-variant/30">
+                      <p className="font-label-caps text-label-caps opacity-80 mb-3 uppercase tracking-wider flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[14px]">auto_stories</span>
+                        Verified Sources
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        {msg.sources.map((source, idx) => (
+                          <details key={idx} className={`rounded text-body-sm border overflow-hidden cursor-pointer group ${msg.role === 'user' ? 'bg-primary-fixed text-on-primary-fixed border-primary-fixed-dim' : 'bg-surface-container-low text-on-surface border-outline-variant'}`}>
+                            <summary className="p-3 font-bold hover:brightness-95 transition-colors flex items-center outline-none">
+                              <span className="mr-2 text-primary">GR {source.gr_no}</span> 
+                              <span className="font-normal truncate flex-1 opacity-70">• {source.department}</span>
+                              <span className="material-symbols-outlined group-open:rotate-180 transition-transform">expand_more</span>
+                            </summary>
+                            <div className="p-4 border-t border-outline-variant/20 bg-surface-container-lowest text-[11px] leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap font-document-text opacity-90">
+                              {source.text}
+                            </div>
+                          </details>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            ))}
+            {loading && (
+              <div className="flex justify-start">
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center mr-3 mt-1 shrink-0">
+                  <span className="material-symbols-outlined text-white text-[16px]">psychology</span>
+                </div>
+                <div className="bg-surface border border-outline-variant text-on-surface rounded-2xl rounded-tl-sm p-5 shadow-sm flex items-center gap-2">
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                  <span className="ml-2 font-body-sm text-on-surface-variant italic">Analyzing legal archives...</span>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
           </div>
-        ))}
-        {loading && (
-          <div className="flex justify-start">
-            <div className="bg-white border border-gray-200 text-gray-800 rounded-2xl rounded-tl-sm p-4 shadow-sm flex items-center gap-2">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
 
-      {/* Input Area */}
-      <div className="p-4 bg-white border-t border-gray-100">
-        <form onSubmit={handleSubmit} className="flex gap-3">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about a policy, department, or GR..."
-            className="flex-1 bg-gray-50 border border-gray-300 rounded-full px-6 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all shadow-inner"
-            disabled={loading}
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || loading}
-            className={`rounded-full w-12 h-12 flex items-center justify-center transition-all shadow-md ${
-              !input.trim() || loading 
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                : 'bg-blue-600 hover:bg-blue-700 text-white hover:shadow-lg transform hover:scale-105'
-            }`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="22" y1="2" x2="11" y2="13"></line>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-            </svg>
-          </button>
-        </form>
+          {/* Input Area */}
+          <div className="p-gutter border-t border-outline-variant bg-surface-container-low">
+            <form onSubmit={handleSubmit} className="max-w-4xl mx-auto relative">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask about legal provisions, financial limits, or specific GRs..."
+                className="w-full bg-surface-container-lowest border border-outline-variant rounded-full pl-6 pr-16 py-4 font-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all shadow-sm"
+                disabled={loading}
+              />
+              <button
+                type="submit"
+                disabled={!input.trim() || loading}
+                className={`absolute right-2 top-2 bottom-2 rounded-full w-12 h-12 flex items-center justify-center transition-all shadow ${
+                  !input.trim() || loading 
+                    ? 'bg-surface-variant text-on-surface-variant cursor-not-allowed' 
+                    : 'bg-primary hover:bg-primary-container hover:text-on-primary-container text-white transform hover:scale-105'
+                }`}
+              >
+                <span className="material-symbols-outlined">send</span>
+              </button>
+            </form>
+            <div className="text-center mt-3">
+              <span className="font-label-caps text-[10px] text-on-surface-variant uppercase tracking-widest">
+                Achuk Nirnay, Pragat Maharashtra
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Sidebar Placeholder (Optional for Legal Info) */}
+        <aside className="hidden lg:block w-80 bg-surface border-l border-outline-variant p-stack-md overflow-y-auto">
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-stack-md mb-6">
+            <h4 className="font-label-caps text-label-caps text-primary border-b border-primary/10 pb-2 mb-4">SYSTEM CAPABILITIES</h4>
+            <ul className="space-y-3 font-body-sm text-on-surface">
+              <li className="flex items-start gap-2">
+                <span className="material-symbols-outlined text-primary text-[18px]">search</span>
+                Semantic Search across 10,000+ GRs
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="material-symbols-outlined text-primary text-[18px]">rule</span>
+                Identify conflicting clauses
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="material-symbols-outlined text-primary text-[18px]">summarize</span>
+                Summarize long documents
+              </li>
+            </ul>
+          </div>
+          
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4">
+             <h4 className="font-label-caps text-label-caps text-on-surface-variant border-b border-outline-variant pb-2 mb-3">EXAMPLE QUERIES</h4>
+             <div className="space-y-2">
+               <button onClick={() => setInput("What are the financial limits for district-level procurement?")} className="w-full text-left text-body-sm text-on-surface p-2 hover:bg-surface-container-low rounded border border-transparent hover:border-outline-variant transition-all">
+                 "What are the financial limits for district-level procurement?"
+               </button>
+               <button onClick={() => setInput("Show me GRs related to agricultural subsidies from 2022.")} className="w-full text-left text-body-sm text-on-surface p-2 hover:bg-surface-container-low rounded border border-transparent hover:border-outline-variant transition-all">
+                 "Show me GRs related to agricultural subsidies from 2022."
+               </button>
+             </div>
+          </div>
+        </aside>
       </div>
     </div>
   );

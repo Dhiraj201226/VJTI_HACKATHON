@@ -24,8 +24,6 @@ export default function DraftingPortal({ draftState, setDraftState }) {
       if (result.status === 'conflicts_detected') {
         navigate('/conflicts');
       } else {
-        // If no conflicts, we could auto-generate, but let's go straight to generation from here
-        // We'll skip to conflicts page with 0 conflicts to just hit "Generate"
         navigate('/conflicts');
       }
     } catch (err) {
@@ -37,54 +35,118 @@ export default function DraftingPortal({ draftState, setDraftState }) {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-4">New Government Resolution</h2>
-      <div className="mb-6">
-        <label className="block text-gray-700 font-semibold mb-2" htmlFor="objective">
-          Policy Objective
-        </label>
-        <p className="text-sm text-gray-500 mb-4">
-          Provide the objective for the new GR. The AI will retrieve relevant policies, detect conflicts, and draft the document automatically.
-        </p>
-        <textarea
-          id="objective"
-          rows="6"
-          className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow resize-none"
-          placeholder="e.g., Establish AI Labs in Government Engineering Colleges."
-          value={objective}
-          onChange={(e) => setObjective(e.target.value)}
-        ></textarea>
-      </div>
-      
-      {error && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-6 border border-red-200">
-          {error}
-        </div>
-      )}
+    <section className="p-gutter overflow-y-auto border-outline-variant bg-white w-full rounded-xl shadow-sm border">
+      <div className="max-w-2xl mx-auto space-y-stack-lg p-6">
+        <header>
+          <h2 className="font-h2 text-h2 text-primary mb-2">Government Resolution Parameters</h2>
+          <p className="font-body-md text-on-surface-variant">Fill in the institutional requirements to initiate the AI-assisted drafting process.</p>
+        </header>
 
-      <div className="flex justify-end">
-        <button
-          onClick={handleInitiate}
-          disabled={loading || !objective.trim()}
-          className={`flex items-center gap-2 px-8 py-3 rounded-lg font-bold text-white transition-all shadow-md ${
-            loading || !objective.trim()
-              ? 'bg-blue-400 cursor-not-allowed'
-              : 'bg-blue-700 hover:bg-blue-800 hover:shadow-lg'
-          }`}
-        >
-          {loading ? (
-            <>
-              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Processing...
-            </>
-          ) : (
-            'Retrieve Context & Analyze'
-          )}
-        </button>
+        {error && (
+          <div className="bg-error-container text-on-error-container p-4 rounded-lg mb-6 text-sm font-medium">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-stack-md">
+          {/* Objective */}
+          <div className="space-y-2">
+            <label className="font-body-sm font-bold text-on-surface block">Objective & Subject Line</label>
+            <textarea 
+              className="w-full border border-outline-variant rounded-lg p-3 text-body-md focus:border-primary focus:ring-1 outline-none transition-all" 
+              placeholder="e.g., Sanctioning of funds for modernizing district courts in Vidarbha region..." 
+              rows="3"
+              value={objective}
+              onChange={(e) => setObjective(e.target.value)}
+            ></textarea>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-stack-md">
+            {/* Department */}
+            <div className="space-y-2">
+              <label className="font-body-sm font-bold text-on-surface block">Department</label>
+              <select className="w-full border border-outline-variant rounded-lg p-2.5 text-body-md focus:border-primary focus:ring-1 outline-none bg-white transition-all">
+                <option>Home Department</option>
+                <option>Finance Department</option>
+                <option>Revenue & Forest</option>
+                <option>Law & Judiciary</option>
+                <option>Public Health</option>
+              </select>
+            </div>
+            {/* Policy Category */}
+            <div className="space-y-2">
+              <label className="font-body-sm font-bold text-on-surface block">Policy Category</label>
+              <select className="w-full border border-outline-variant rounded-lg p-2.5 text-body-md focus:border-primary focus:ring-1 outline-none bg-white transition-all">
+                <option>Financial Allocation</option>
+                <option>Appointment/Recruitment</option>
+                <option>New Infrastructure</option>
+                <option>Public Policy Amendment</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-stack-md">
+            {/* Priority */}
+            <div className="space-y-2">
+              <label className="font-body-sm font-bold text-on-surface block">Priority Level</label>
+              <div className="flex gap-2">
+                <button className="flex-1 py-2 px-3 border border-outline-variant rounded text-body-sm hover:bg-surface-container hover:border-primary transition-all">Standard</button>
+                <button className="flex-1 py-2 px-3 border border-outline-variant rounded text-body-sm hover:bg-surface-container hover:border-primary transition-all">Urgent</button>
+                <button className="flex-1 py-2 px-3 border border-error rounded text-error font-bold text-body-sm bg-error-container/10">Critical</button>
+              </div>
+            </div>
+            {/* Language */}
+            <div className="space-y-2">
+              <label className="font-body-sm font-bold text-on-surface block">Language Mode</label>
+              <div className="flex gap-2">
+                <button className="flex-1 py-2 px-3 border border-primary text-primary font-bold bg-primary-container/10 rounded text-body-sm">Marathi (Primary)</button>
+                <button className="flex-1 py-2 px-3 border border-outline-variant rounded text-body-sm hover:bg-surface-container">English</button>
+              </div>
+            </div>
+          </div>
+
+          {/* Officer Notes */}
+          <div className="space-y-2">
+            <label className="font-body-sm font-bold text-on-surface block">Officer Confidential Notes</label>
+            <textarea className="w-full border border-outline-variant rounded-lg p-3 text-body-md focus:border-primary focus:ring-1 outline-none transition-all" placeholder="Internal justifications, reference to past cabinet meetings, or specific clauses to include..." rows="4"></textarea>
+          </div>
+
+          {/* Document Upload */}
+          <div className="space-y-2">
+            <label className="font-body-sm font-bold text-on-surface block">Supporting Documents (PDF/DOCX)</label>
+            <div className="border-2 border-dashed border-outline-variant rounded-lg p-8 flex flex-col items-center justify-center text-center bg-surface-container-lowest hover:bg-surface-container-low transition-all cursor-pointer">
+              <span className="material-symbols-outlined text-4xl text-primary mb-2">cloud_upload</span>
+              <p className="font-body-sm text-on-surface font-semibold">Click to upload or drag and drop</p>
+              <p className="font-label-caps text-on-surface-variant mt-1">MAX SIZE 25MB PER FILE</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-8 border-t border-outline-variant">
+          <button 
+            onClick={handleInitiate}
+            disabled={loading || !objective.trim()}
+            className={`w-full py-4 rounded-lg font-h3 text-h3 font-semibold shadow-lg transition-all flex items-center justify-center gap-3 active:scale-[0.98] ${
+              loading || !objective.trim()
+                ? 'bg-surface-variant text-on-surface-variant cursor-not-allowed'
+                : 'bg-primary-container text-white hover:brightness-110'
+            }`}
+          >
+            {loading ? (
+              <>
+                <span className="material-symbols-outlined animate-spin">sync</span>
+                Processing Alignment...
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined">psychology</span>
+                Generate AI Draft Resolution
+              </>
+            )}
+          </button>
+          <p className="text-center font-body-sm text-on-surface-variant mt-4">Drafting engine will analyze 142,000+ past GRs for semantic alignment.</p>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

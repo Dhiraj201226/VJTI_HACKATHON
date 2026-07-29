@@ -6,9 +6,11 @@ from .models import ParsedGR
 def extract_real_department(content_lines: list[str]) -> str:
     # Scan the first 25 lines of the GR content to find the real department name
     for line in content_lines[:25]:
-        line_clean = line.strip()
-        if "Department" in line_clean and "Resolution" not in line_clean and "Circular" not in line_clean:
-            return line_clean
+        line_lower = line.lower()
+        # The line should contain 'department', not be a resolution/circular header, and not be a massive paragraph
+        if "department" in line_lower and "resolution" not in line_lower and "circular" not in line_lower:
+            if len(line.split()) <= 15:
+                return line.strip()
     return "Unknown Department"
 
 def parse_grs(filepath: str = settings.DATASET_PATH, start_from_gr: int = 0) -> Generator[ParsedGR, None, None]:

@@ -20,4 +20,19 @@ export const generateDraft = async (objective, officerDecisions) => {
     return response.data;
 };
 
+export const checkLegalCompliance = async (grJson) => {
+    const response = await apiClient.post('/draft/legal_review', grJson);
+    return response.data;
+};
+
+export const askFAQ = async (question) => {
+    const response = await apiClient.post('/faq/ask', { question });
+    return response.data;
+};
+
+export const getRagStats = async () => {
+    const response = await apiClient.get('/rag/stats');
+    return response.data;
+};
+
 export default apiClient;
