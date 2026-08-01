@@ -41,6 +41,8 @@ const DEPARTMENTS = [
 export default function DraftingPortal({ draftState, setDraftState }) {
   const [objective, setObjective] = useState(draftState.objective || '');
   const [officerNotes, setOfficerNotes] = useState('');
+  const [references, setReferences] = useState('');
+  const [copyTo, setCopyTo] = useState('');
   const [priority, setPriority] = useState('Standard');
   const [language, setLanguage] = useState('Marathi');
   const [file, setFile] = useState(null);
@@ -65,6 +67,14 @@ export default function DraftingPortal({ draftState, setDraftState }) {
 
       if (officerNotes.trim()) {
         finalObjective += `\n\n[OFFICER CONFIDENTIAL NOTES]:\n${officerNotes}`;
+      }
+      
+      if (references.trim()) {
+        finalObjective += `\n\n[REFERENCES (संदर्भ)]:\n${references}`;
+      }
+      
+      if (copyTo.trim()) {
+        finalObjective += `\n\n[COPY TO (प्रत)]:\n${copyTo}`;
       }
 
       const result = await initiateDraft({ objective: finalObjective, language });
@@ -207,10 +217,36 @@ export default function DraftingPortal({ draftState, setDraftState }) {
             <textarea 
               className="w-full border border-outline-variant rounded-lg p-3 text-body-md focus:border-primary focus:ring-1 outline-none transition-all" 
               placeholder="Internal justifications, reference to past cabinet meetings, or specific clauses to include..." 
-              rows="4"
+              rows="2"
               value={officerNotes}
               onChange={(e) => setOfficerNotes(e.target.value)}
             ></textarea>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-stack-md">
+            {/* References */}
+            <div className="space-y-2">
+              <label className="font-body-sm font-bold text-on-surface block">References (संदर्भ)</label>
+              <textarea 
+                className="w-full border border-outline-variant rounded-lg p-3 text-body-md focus:border-primary focus:ring-1 outline-none transition-all" 
+                placeholder="e.g., शासन निर्णय, शालेय शिक्षण व क्रीडा विभाग, समक्रमांक..." 
+                rows="3"
+                value={references}
+                onChange={(e) => setReferences(e.target.value)}
+              ></textarea>
+            </div>
+            
+            {/* Copy To */}
+            <div className="space-y-2">
+              <label className="font-body-sm font-bold text-on-surface block">Copy To (प्रत)</label>
+              <textarea 
+                className="w-full border border-outline-variant rounded-lg p-3 text-body-md focus:border-primary focus:ring-1 outline-none transition-all" 
+                placeholder="e.g., १) आयुक्त (शिक्षण), महाराष्ट्र राज्य, पुणे\n२) सर्व विभागीय शिक्षण उपसंचालक" 
+                rows="3"
+                value={copyTo}
+                onChange={(e) => setCopyTo(e.target.value)}
+              ></textarea>
+            </div>
           </div>
 
           {/* Document Upload */}

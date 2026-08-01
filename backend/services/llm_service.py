@@ -55,7 +55,8 @@ EXPECTED JSON STRUCTURE:
         "implementation": "Implementation instructions",
         "signature": "Name of signing authority",
         "designation": "Designation of signing authority",
-        "footer": "Official footer text"
+        "footer": "Official footer text",
+        "copy_to": ["String array of distribution recipients (prat)"]
     }}
 }}
 """

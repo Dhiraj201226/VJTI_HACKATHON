@@ -41,6 +41,7 @@ class TemplateFields(BaseModel):
     signature: str
     designation: str
     footer: str
+    copy_to: List[str] = []
 
 class LLMDraftResponse(BaseModel):
     references: List[Reference]
