@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getRagStats, getDraftHistory } from '../api/client';
 
-export default function Dashboard() {
+export default function Dashboard({ userRole }) {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ total_points_ingested: 0 });
   const [history, setHistory] = useState([]);
@@ -150,10 +150,12 @@ export default function Dashboard() {
           <div className="bg-surface-container-low border border-outline-variant rounded-lg p-6">
             <h3 className="font-label-caps text-label-caps text-on-surface-variant uppercase mb-4">Quick Actions</h3>
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => navigate('/create')} className="flex flex-col items-center justify-center gap-2 p-4 bg-surface-container-lowest border border-outline-variant rounded-lg hover:border-primary hover:text-primary transition-all">
-                <span className="material-symbols-outlined">add_circle</span>
-                <span className="text-[11px] font-bold">New GR</span>
-              </button>
+              {userRole === 'Desk Officer' && (
+                <button onClick={() => navigate('/create')} className="flex flex-col items-center justify-center gap-2 p-4 bg-surface-container-lowest border border-outline-variant rounded-lg hover:border-primary hover:text-primary transition-all">
+                  <span className="material-symbols-outlined">add_circle</span>
+                  <span className="text-[11px] font-bold">New GR</span>
+                </button>
+              )}
               <button onClick={() => navigate('/chat')} className="flex flex-col items-center justify-center gap-2 p-4 bg-surface-container-lowest border border-outline-variant rounded-lg hover:border-primary hover:text-primary transition-all">
                 <span className="material-symbols-outlined">auto_awesome</span>
                 <span className="text-[11px] font-bold">AI Chat</span>
