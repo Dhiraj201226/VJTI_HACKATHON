@@ -1,5 +1,7 @@
 import os
 from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Inches, Pt
 import fitz  # PyMuPDF
 from models.schemas import LLMDraftResponse
 import shutil
@@ -12,26 +14,47 @@ def create_mock_template_if_not_exists():
     os.makedirs("./templates", exist_ok=True)
     if not os.path.exists(TEMPLATE_PATH):
         doc = Document()
-        doc.add_heading('GOVERNMENT OF MAHARASHTRA', 0)
-        doc.add_paragraph('Department: {{DEPARTMENT}}')
-        doc.add_paragraph('GR Number: {{GR_NUMBER}}')
-        doc.add_paragraph('Date: {{DATE}}')
-        doc.add_heading('Subject', level=1)
-        doc.add_paragraph('{{SUBJECT}}')
-        doc.add_heading('References', level=1)
-        doc.add_paragraph('{{REFERENCES}}')
-        doc.add_heading('Resolution', level=1)
-        doc.add_paragraph('{{BODY}}')
-        doc.add_heading('Clauses', level=2)
-        doc.add_paragraph('{{CLAUSES}}')
-        doc.add_heading('Financial Implications', level=2)
-        doc.add_paragraph('{{FINANCIAL_IMPLICATIONS}}')
-        doc.add_heading('Implementation', level=2)
-        doc.add_paragraph('{{IMPLEMENTATION}}')
-        doc.add_paragraph('\n\nBy order and in the name of the Governor of Maharashtra,\n')
-        doc.add_paragraph('{{SIGNATURE}}')
-        doc.add_paragraph('{{DESIGNATION}}')
-        doc.add_paragraph('\n{{FOOTER}}')
+        
+        # We use a placeholder logic, so we just create a styled document with placeholders
+        # Logo placeholder
+        p_logo = doc.add_paragraph('{{LOGO}}')
+        p_logo.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        # Header
+        p_header = doc.add_paragraph('महाराष्ट्र शासन\n{{DEPARTMENT}}\nशासन परिपत्रक क्रमांक : {{GR_NUMBER}}\nदिनांक : {{DATE}}')
+        p_header.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        # Subject
+        p_sub = doc.add_paragraph('{{SUBJECT}}')
+        p_sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_sub.runs[0].bold = True
+        
+        # References
+        p_ref = doc.add_paragraph('संदर्भ :\n{{REFERENCES}}')
+        p_ref.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        
+        # Body
+        p_body = doc.add_paragraph('शासन परिपत्रक :\n{{BODY}}')
+        p_body.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        
+        # Clauses
+        p_clauses = doc.add_paragraph('{{CLAUSES}}')
+        p_clauses.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        
+        # Signature Command
+        p_sigcmd = doc.add_paragraph('\nमहाराष्ट्राचे राज्यपाल यांच्या आदेशानुसार व नावाने,')
+        p_sigcmd.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        # Signature
+        p_sig = doc.add_paragraph('{{SIGNATURE}}\n{{DESIGNATION}}')
+        p_sig.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        
+        # Divider Placeholder
+        doc.add_paragraph('__________________________________________________________________')
+        
+        # Copy To
+        doc.add_paragraph('प्रत,\n{{COPY_TO}}')
+        
         doc.save(TEMPLATE_PATH)
 
 def replace_placeholder(doc, placeholder, replacement_text):
@@ -51,112 +74,50 @@ def generate_documents(json_data: LLMDraftResponse):
     doc = Document(TEMPLATE_PATH)
     fields = json_data.template_fields
     
+    copy_to_text = ""
+    if hasattr(fields, 'copy_to') and fields.copy_to:
+        copy_to_text = "\n".join([f"  {i+1}) {c}" for i, c in enumerate(fields.copy_to)])
+
     replacements = {
         '{{DEPARTMENT}}': fields.department,
         '{{GR_NUMBER}}': fields.gr_number,
         '{{DATE}}': fields.date,
         '{{SUBJECT}}': fields.subject,
-        '{{REFERENCES}}': "\n".join(fields.references),
-        '{{BODY}}': "\n\n".join(fields.body),
-        '{{CLAUSES}}': "\n\n".join(fields.clauses),
-        '{{FINANCIAL_IMPLICATIONS}}': fields.financial_implications,
-        '{{IMPLEMENTATION}}': fields.implementation,
+        '{{REFERENCES}}': "\n".join([f"    {r}" for r in fields.references]) if fields.references else "",
+        '{{BODY}}': "\n\n".join(["    " + p for p in fields.body]),
+        '{{CLAUSES}}': "\n\n".join(["    " + c for c in fields.clauses]) if fields.clauses else "",
         '{{SIGNATURE}}': fields.signature,
         '{{DESIGNATION}}': fields.designation,
-        '{{FOOTER}}': fields.footer,
+        '{{COPY_TO}}': copy_to_text,
     }
     
     for placeholder, text in replacements.items():
         replace_placeholder(doc, placeholder, str(text))
         
+    # Replace logo placeholder with actual image if exists
+    logo_path = os.path.join("data", "logo.png")
+    for p in doc.paragraphs:
+        if '{{LOGO}}' in p.text:
+            p.text = p.text.replace('{{LOGO}}', '')
+            if os.path.exists(logo_path):
+                r = p.add_run()
+                r.add_picture(logo_path, width=Inches(1.0))
+        
     docx_filename = f"GR_{fields.gr_number.replace('/', '_')}.docx"
     docx_path = os.path.join(OUTPUT_DIR, docx_filename)
     doc.save(docx_path)
     
-    # Overleaf/LaTeX style PDF generation
     pdf_filename = f"GR_{fields.gr_number.replace('/', '_')}.pdf"
     pdf_path = os.path.join(OUTPUT_DIR, pdf_filename)
     
-    pdf = fitz.open()
-    page = pdf.new_page(width=595, height=842) # A4 size
-    
-    font_path = os.path.join("data", "NotoSansDevanagari.ttf")
-    if os.path.exists(font_path):
-        page.insert_font(fontname="marathi", fontfile=font_path)
-        fontname = "marathi"
-    else:
-        fontname = "helv"
-        
-    # Layout constants
-    MARGIN_LEFT = 50
-    MARGIN_RIGHT = 545
-    MARGIN_TOP = 50
-    current_y = MARGIN_TOP
-    
-    # 1. Logo (Center Top)
-    logo_path = os.path.join("data", "logo.png")
-    if os.path.exists(logo_path):
-        logo_rect = fitz.Rect(260, current_y, 335, current_y + 75)
-        page.insert_image(logo_rect, filename=logo_path)
-        current_y += 85
-    
-    # 2. Header Information (Center)
-    header_text = f"महाराष्ट्र शासन\n{fields.department}\nशासन परिपत्रक क्रमांक : {fields.gr_number}\nदिनांक : {fields.date}"
-    page.insert_textbox(fitz.Rect(MARGIN_LEFT, current_y, MARGIN_RIGHT, current_y + 80), 
-                       header_text, fontsize=12, fontname=fontname, align=fitz.TEXT_ALIGN_CENTER)
-    current_y += 90
-    
-    # 3. Subject (Center, Bold/Large)
-    page.insert_textbox(fitz.Rect(MARGIN_LEFT + 50, current_y, MARGIN_RIGHT - 50, current_y + 60), 
-                       fields.subject, fontsize=14, fontname=fontname, align=fitz.TEXT_ALIGN_CENTER)
-    current_y += 70
-    
-    # 4. References (Left aligned, indented slightly)
-    if fields.references:
-        ref_text = "संदर्भ :\n" + "\n".join([f"    {r}" for r in fields.references])
-        page.insert_textbox(fitz.Rect(MARGIN_LEFT, current_y, MARGIN_RIGHT, current_y + 60), 
-                           ref_text, fontsize=11, fontname=fontname, align=fitz.TEXT_ALIGN_LEFT)
-        current_y += 70
-    
-    # 5. Main Body ("शासन परिपत्रक :")
-    page.insert_textbox(fitz.Rect(MARGIN_LEFT, current_y, MARGIN_RIGHT, current_y + 20), 
-                       "शासन परिपत्रक :", fontsize=12, fontname=fontname, align=fitz.TEXT_ALIGN_LEFT)
-    current_y += 30
-    
-    body_text = "\n\n".join(["    " + p for p in fields.body])
-    if fields.clauses:
-        body_text += "\n\n" + "\n\n".join(["    " + c for c in fields.clauses])
-    
-    # Estimate body height, insert text
-    page.insert_textbox(fitz.Rect(MARGIN_LEFT, current_y, MARGIN_RIGHT, current_y + 250), 
-                       body_text, fontsize=11, fontname=fontname, align=fitz.TEXT_ALIGN_JUSTIFY)
-    current_y += 260
-    
-    # 6. Signature Block (Right aligned)
-    sig_y = current_y + 20
-    page.insert_textbox(fitz.Rect(MARGIN_LEFT, sig_y, MARGIN_RIGHT, sig_y + 20), 
-                       "महाराष्ट्राचे राज्यपाल यांच्या आदेशानुसार व नावाने,", fontsize=11, fontname=fontname, align=fitz.TEXT_ALIGN_CENTER)
-    
-    sig_text = f"\n\n{fields.signature}\n{fields.designation}"
-    page.insert_textbox(fitz.Rect(MARGIN_RIGHT - 200, sig_y + 30, MARGIN_RIGHT, sig_y + 100), 
-                       sig_text, fontsize=11, fontname=fontname, align=fitz.TEXT_ALIGN_RIGHT)
-    current_y = sig_y + 110
-    
-    # 7. Horizontal Line
-    page.draw_line(fitz.Point(MARGIN_LEFT, current_y), fitz.Point(MARGIN_RIGHT, current_y), color=(0,0,0), width=1.5)
-    current_y += 20
-    
-    # 8. Copy To (प्रत)
-    if hasattr(fields, 'copy_to') and fields.copy_to:
-        copy_text = "प्रत,\n" + "\n".join([f"  {i+1}) {c}" for i, c in enumerate(fields.copy_to)])
-        page.insert_textbox(fitz.Rect(MARGIN_LEFT, current_y, MARGIN_RIGHT, current_y + 120), 
-                           copy_text, fontsize=10, fontname=fontname, align=fitz.TEXT_ALIGN_LEFT)
-    
-    # 9. Page Number (Footer)
-    page.insert_textbox(fitz.Rect(MARGIN_LEFT, 800, MARGIN_RIGHT, 820), 
-                       "पृष्ठ १ पैकी १", fontsize=10, fontname=fontname, align=fitz.TEXT_ALIGN_CENTER)
-    
-    pdf.save(pdf_path)
+    # Use docx2pdf for flawless native rendering!
+    import pythoncom
+    pythoncom.CoInitialize()
+    try:
+        from docx2pdf import convert
+        convert(os.path.abspath(docx_path), os.path.abspath(pdf_path))
+    finally:
+        pythoncom.CoUninitialize()
     
     return docx_path, pdf_path
 
