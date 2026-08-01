@@ -26,7 +26,7 @@ export default function ConflictResolution({ draftState, setDraftState }) {
         ...data
       }));
       
-      const result = await generateDraft(draftState.objective, officerDecisions);
+      const result = await generateDraft(draftState.objective, officerDecisions, draftState.language || 'English');
       
       setDraftState({
         ...draftState,

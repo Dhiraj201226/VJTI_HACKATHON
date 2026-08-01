@@ -1,6 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.routes import router
+from db.database import engine, Base
+
+# Initialize SQLite Database tables
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="MAHA-GR ALIGN API", version="1.0.0")
 

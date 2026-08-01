@@ -81,6 +81,14 @@ def generate_documents(json_data: LLMDraftResponse):
     
     pdf = fitz.open()
     page = pdf.new_page()
+    
+    font_path = os.path.join("data", "NotoSansDevanagari.ttf")
+    if os.path.exists(font_path):
+        page.insert_font(fontname="marathi", fontfile=font_path)
+        fontname = "marathi"
+    else:
+        fontname = "helv"
+        
     text = f"""GOVERNMENT OF MAHARASHTRA
 Department: {fields.department}
 GR Number: {fields.gr_number}
@@ -117,7 +125,51 @@ By order and in the name of the Governor of Maharashtra,
         page.insert_image(logo_rect, filename=logo_path)
     
     rect = fitz.Rect(50, 110, 545, 792)  # A4 margins, shifted down for logo
-    page.insert_textbox(rect, text, fontsize=10, fontname="helv")
+    page.insert_textbox(rect, text, fontsize=10, fontname=fontname)
     pdf.save(pdf_path)
     
     return docx_path, pdf_path
+
+import qrcode
+import hashlib
+
+def stamp_qr_and_hash(pdf_path: str, gr_id: int) -> str:
+    """Stamps a QR code onto an existing PDF, saves it, and returns the SHA256 hash."""
+    verification_url = f"http://localhost:5174/verify?id={gr_id}"
+    
+    # Generate QR Code image
+    qr = qrcode.QRCode(version=1, box_size=5, border=2)
+    qr.add_data(verification_url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    qr_path = os.path.join(OUTPUT_DIR, f"qr_{gr_id}.png")
+    img.save(qr_path)
+    
+    # Open the existing PDF
+    pdf = fitz.open(pdf_path)
+    page = pdf[0] # Stamp on first page
+    
+    # Insert QR at bottom right corner (approx coords for A4)
+    rect = fitz.Rect(480, 720, 560, 800)
+    page.insert_image(rect, filename=qr_path)
+    
+    # Add a small text below QR
+    text_rect = fitz.Rect(470, 805, 570, 820)
+    page.insert_textbox(text_rect, "Scan to Verify", fontsize=8, fontname="helv", align=fitz.TEXT_ALIGN_CENTER)
+    
+    # Overwrite the PDF
+    pdf.save(pdf.name, incremental=True, encryption=fitz.PDF_ENCRYPT_KEEP)
+    pdf.close()
+    
+    # Calculate SHA256 Hash
+    sha256 = hashlib.sha256()
+    with open(pdf_path, 'rb') as f:
+        while chunk := f.read(8192):
+            sha256.update(chunk)
+            
+    # Clean up QR image
+    if os.path.exists(qr_path):
+        os.remove(qr_path)
+        
+    return sha256.hexdigest()

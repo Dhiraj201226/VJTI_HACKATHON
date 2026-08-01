@@ -7,15 +7,18 @@ const apiClient = axios.create({
     }
 });
 
-export const initiateDraft = async (objective) => {
-    const response = await apiClient.post('/draft/initiate', { objective });
+export const initiateDraft = async (params) => {
+    // Check if params is string (old way) or object (new way)
+    const data = typeof params === 'string' ? { objective: params, language: "Marathi" } : params;
+    const response = await apiClient.post('/draft/initiate', data);
     return response.data;
 };
 
-export const generateDraft = async (objective, officerDecisions) => {
+export const generateDraft = async (objective, officerDecisions, language = "Marathi") => {
     const response = await apiClient.post('/draft/generate', {
         objective,
-        officer_decisions: officerDecisions
+        officer_decisions: officerDecisions,
+        language
     });
     return response.data;
 };
@@ -32,6 +35,22 @@ export const askFAQ = async (question) => {
 
 export const getRagStats = async () => {
     const response = await apiClient.get('/rag/stats');
+    return response.data;
+};
+
+export const uploadAndExtractText = async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.post('/draft/extract_text', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
+    return response.data;
+};
+
+export const getDraftHistory = async () => {
+    const response = await apiClient.get('/draft/history');
     return response.data;
 };
 

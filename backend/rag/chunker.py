@@ -1,29 +1,28 @@
-from transformers import AutoTokenizer
 from typing import Generator
 from config import settings
 from .models import ParsedGR, GRChunk
 
-# Initialize tokenizer once
-tokenizer = AutoTokenizer.from_pretrained(settings.EMBEDDING_MODEL_NAME)
-# Suppress the warning about sequences longer than the model's max length 
-# since we are deliberately tokenizing long texts just to chunk them down.
-tokenizer.model_max_length = 1_000_000
-
 def chunk_text(text: str, chunk_size: int = settings.CHUNK_SIZE, overlap: int = settings.CHUNK_OVERLAP) -> list[str]:
-    # Tokenize text to get exact token counts
-    tokens = tokenizer.encode(text, add_special_tokens=False)
+    """
+    Blazingly fast chunking using word splitting instead of huggingface tokenization.
+    Assumes ~0.75 words per token for English/Marathi mixed text.
+    """
+    chunk_size_words = int(chunk_size * 0.75)
+    overlap_words = int(overlap * 0.75)
     
+    words = text.split()
     chunks = []
     start = 0
-    while start < len(tokens):
-        end = start + chunk_size
-        chunk_tokens = tokens[start:end]
-        chunks.append(tokenizer.decode(chunk_tokens, skip_special_tokens=True))
+    
+    while start < len(words):
+        end = start + chunk_size_words
+        chunk = " ".join(words[start:end])
+        chunks.append(chunk)
         
-        if end >= len(tokens):
+        if end >= len(words):
             break
             
-        start += (chunk_size - overlap)
+        start += (chunk_size_words - overlap_words)
         
     return chunks
 

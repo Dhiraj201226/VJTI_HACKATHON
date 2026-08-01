@@ -5,10 +5,12 @@ from models.schemas import LLMDraftResponse
 
 client = Groq(api_key=settings.GROQ_API_KEY)
 
-def build_prompt(objective: str, context: str, decisions: str) -> str:
+def build_prompt(objective: str, context: str, decisions: str, language: str) -> str:
     return f"""
-You are an expert Government Resolution drafting AI for the Government of Maharashtra.
-Your task is to draft a formal Government Resolution based on the following objective, context, and officer decisions.
+You are an expert Government Resolution (GR) drafting AI for the Government of Maharashtra.
+
+CRITICAL REQUIREMENT: YOU MUST WRITE ALL CONTENT EXCLUSIVELY IN {language.upper()}! 
+If the language is Marathi, every single string inside `template_fields` (subject, body, clauses, references, financial_implications, implementation, signature, designation, footer) MUST be written in pure Marathi (Devanagari script). Do NOT output English text for these fields. 
 
 OBJECTIVE:
 {objective}
@@ -20,11 +22,12 @@ OFFICER CONFLICT DECISIONS:
 {decisions}
 
 DRAFTING RULES:
-1. Maintain formal government writing style.
+1. Maintain formal government writing style in {language.upper()}.
 2. The document engine will place your outputs into an official template.
 3. You must decide what content belongs in which placeholder.
 4. Do NOT include placeholder tags in your text.
-5. Return ONLY a JSON object that perfectly matches the following structure. Do not return markdown, do not return any conversational text.
+5. Return ONLY a JSON object that perfectly matches the structure below.
+6. TRANSLATE everything to {language.upper()} before outputting the JSON.
 
 EXPECTED JSON STRUCTURE:
 {{
@@ -57,8 +60,11 @@ EXPECTED JSON STRUCTURE:
 }}
 """
 
-def generate_gr_json(objective: str, retrieved_chunks: dict, officer_decisions: list) -> LLMDraftResponse:
-    # Format context
+def generate_gr_json(objective: str, retrieved_chunks: dict, officer_decisions: list = None, language: str = "English") -> LLMDraftResponse:
+    if officer_decisions is None:
+        officer_decisions = []
+    
+    # Pre-process inputs
     docs = retrieved_chunks.get('documents', [[]])[0]
     context_str = "\n".join([f"- {doc}" for doc in docs])
     
@@ -67,7 +73,7 @@ def generate_gr_json(objective: str, retrieved_chunks: dict, officer_decisions: 
     if not decisions_str:
         decisions_str = "None"
         
-    prompt = build_prompt(objective, context_str, decisions_str)
+    prompt = build_prompt(objective, context_str, decisions_str, language)
     
     # We use Groq's JSON mode if supported, or just prompt engineering
     response = client.chat.completions.create(
@@ -88,6 +94,38 @@ def generate_gr_json(objective: str, retrieved_chunks: dict, officer_decisions: 
     
     content = response.choices[0].message.content
     parsed_json = json.loads(content)
+    
+    if language.lower() == "marathi":
+        print("Translating JSON to Marathi...")
+        translate_prompt = f"""
+You are a master Marathi translator. 
+Translate the string values of the following JSON into pure Marathi (Devanagari script).
+DO NOT change the JSON keys. Keep the exact same structure.
+ONLY translate the following keys inside template_fields: department, subject, references (array), body (array), clauses (array), financial_implications, implementation, signature, designation, footer.
+
+JSON to translate:
+{json.dumps(parsed_json, indent=2)}
+"""
+        translate_response = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You output ONLY valid JSON in the exact same structure as provided, but with values translated to Marathi."
+                },
+                {
+                    "role": "user",
+                    "content": translate_prompt
+                }
+            ],
+            model=settings.LLM_MODEL,
+            response_format={"type": "json_object"},
+            temperature=0.1
+        )
+        try:
+            translated_content = translate_response.choices[0].message.content
+            parsed_json = json.loads(translated_content)
+        except Exception as e:
+            print("Translation failed, falling back to original JSON.", e)
     
     # Validate and return using Pydantic
     return LLMDraftResponse(**parsed_json)

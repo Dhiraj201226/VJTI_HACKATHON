@@ -10,28 +10,29 @@ def check_constitutional_validity(gr_json: dict) -> dict:
     """
     Evaluates a generated Government Resolution for constitutional validity.
     """
-    subject = gr_json.get("template_fields", {}).get("subject", "")
-    body = "\n".join(gr_json.get("template_fields", {}).get("body", []))
-    clauses = "\n".join(gr_json.get("template_fields", {}).get("clauses", []))
-
-    gr_text = f"Subject: {subject}\nBody: {body}\nClauses: {clauses}"
-    
-    # RAG: Retrieve relevant constitutional articles
-    retrieved_articles = ""
     try:
-        from rag.embedder import get_embedding
-        query_embedding = get_embedding(subject + " " + clauses)
-        search_result = qdrant_client.query_points(
-            collection_name="constitution",
-            query=query_embedding,
-            limit=3
-        )
-        if search_result.points:
-            retrieved_articles = "\n\n".join([p.payload.get("text", "") for p in search_result.points])
-    except Exception as e:
-        print(f"Warning: Could not retrieve constitution articles: {e}")
+        subject = gr_json.get("template_fields", {}).get("subject", "")
+        body = "\n".join(gr_json.get("template_fields", {}).get("body", []))
+        clauses = "\n".join(gr_json.get("template_fields", {}).get("clauses", []))
 
-    prompt = f"""
+        gr_text = f"Subject: {subject}\nBody: {body}\nClauses: {clauses}"
+        
+        # RAG: Retrieve relevant constitutional articles
+        retrieved_articles = ""
+        try:
+            from rag.embedder import get_embedding
+            query_embedding = get_embedding(subject + " " + clauses)
+            search_result = qdrant_client.query_points(
+                collection_name="constitution",
+                query=query_embedding,
+                limit=3
+            )
+            if search_result.points:
+                retrieved_articles = "\n\n".join([p.payload.get("text", "") for p in search_result.points])
+        except Exception as e:
+            print(f"Warning: Could not retrieve constitution articles: {e}")
+
+        prompt = f"""
 You are an expert Legal Advisor and Constitutional Law AI for the Government of Maharashtra.
 Your task is to review the following drafted Government Resolution (GR) and strictly evaluate it against the real Constitution of India.
 
@@ -53,29 +54,29 @@ Provide a legal review. Return ONLY a valid JSON object with the following struc
 }}
 """
 
-    response = client.chat.completions.create(
-        messages=[
-            {
-                "role": "system",
-                "content": "You are a specialized Legal AI that outputs ONLY valid JSON."
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        model=settings.GROQ_MODEL,
-        response_format={"type": "json_object"},
-        temperature=0.1
-    )
-    
-    content = response.choices[0].message.content
-    try:
+        response = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a specialized Legal AI that outputs ONLY valid JSON."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            model=settings.LLM_MODEL,
+            response_format={"type": "json_object"},
+            temperature=0.1
+        )
+        
+        content = response.choices[0].message.content
         return json.loads(content)
     except Exception as e:
+        import traceback
         return {
             "is_valid": False,
-            "violations": ["Error parsing AI response"],
-            "analysis": str(e),
-            "recommendation": "Manual legal review required."
+            "violations": ["Internal Server Error Caught in Legal Service"],
+            "analysis": traceback.format_exc(),
+            "recommendation": "Check backend logs or this traceback."
         }

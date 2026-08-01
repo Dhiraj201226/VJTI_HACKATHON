@@ -1,11 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-export default function Layout({ children }) {
+export default function Layout({ children, userRole, setUserRole }) {
   const navigate = useNavigate();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const handleLogout = () => {
+    setUserRole(null);
+    setIsDropdownOpen(false);
+    navigate('/login');
+  };
 
   return (
-    <div className="bg-background text-on-surface font-body-md overflow-x-hidden min-h-screen">
+    <div className="bg-background text-on-surface font-body-md overflow-x-hidden min-h-screen" onClick={() => setIsDropdownOpen(false)}>
       {/* Sidebar Navigation */}
       <aside className="hidden md:flex h-screen w-64 fixed left-0 top-0 bg-surface-container-low border-r border-outline-variant flex-col py-stack-md z-50">
         <div className="px-gutter mb-stack-lg">
@@ -25,18 +32,30 @@ export default function Layout({ children }) {
                 <span className="font-body-sm text-body-sm">Dashboard</span>
               </button>
             </li>
-            <li>
-              <button onClick={() => navigate('/create')} className="w-full flex items-center gap-3 px-gutter py-3 text-on-surface-variant hover:bg-surface-container-high transition-all active:scale-95">
-                <span className="material-symbols-outlined">add_circle</span>
-                <span className="font-body-sm text-body-sm">Create New GR</span>
-              </button>
-            </li>
+            {userRole === 'Desk Officer' && (
+              <li>
+                <button onClick={() => navigate('/create')} className="w-full flex items-center gap-3 px-gutter py-3 text-on-surface-variant hover:bg-surface-container-high transition-all active:scale-95">
+                  <span className="material-symbols-outlined">add_circle</span>
+                  <span className="font-body-sm text-body-sm">Create New GR</span>
+                </button>
+              </li>
+            )}
             <li>
               <button onClick={() => navigate('/conflicts')} className="w-full flex items-center gap-3 px-gutter py-3 text-on-surface-variant hover:bg-surface-container-high transition-all active:scale-95">
                 <span className="material-symbols-outlined">rule</span>
                 <span className="font-body-sm text-body-sm">Conflict Detection</span>
               </button>
             </li>
+            {(userRole === 'Deputy Secretary' || userRole === 'Secretary') && (
+              <li>
+                <button onClick={() => navigate('/queue')} className="w-full flex items-center gap-3 px-gutter py-3 text-on-surface-variant hover:bg-surface-container-high transition-all active:scale-95">
+                  <span className="material-symbols-outlined">pending_actions</span>
+                  <span className="font-body-sm text-body-sm">
+                    {userRole === 'Secretary' ? 'Finalize GR' : 'Approval Queue'}
+                  </span>
+                </button>
+              </li>
+            )}
             <li>
               <button onClick={() => navigate('/chat')} className="w-full flex items-center gap-3 px-gutter py-3 text-on-surface-variant hover:bg-surface-container-high transition-all active:scale-95">
                 <span className="material-symbols-outlined">gavel</span>
@@ -47,6 +66,12 @@ export default function Layout({ children }) {
               <button onClick={() => navigate('/faq')} className="w-full flex items-center gap-3 px-gutter py-3 text-on-surface-variant hover:bg-surface-container-high transition-all active:scale-95">
                 <span className="material-symbols-outlined">help</span>
                 <span className="font-body-sm text-body-sm">FAQ / Help</span>
+              </button>
+            </li>
+            <li>
+              <button onClick={() => navigate('/verify')} className="w-full flex items-center gap-3 px-gutter py-3 text-on-surface-variant hover:bg-surface-container-high transition-all active:scale-95">
+                <span className="material-symbols-outlined">verified</span>
+                <span className="font-body-sm text-body-sm">Verify Authenticity</span>
               </button>
             </li>
           </ul>
@@ -75,8 +100,25 @@ export default function Layout({ children }) {
               <button className="p-2 text-on-surface-variant hover:text-primary transition-colors">
                 <span className="material-symbols-outlined">notifications</span>
               </button>
-              <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center border border-primary overflow-hidden ml-2">
-                <span className="material-symbols-outlined text-on-primary-container">person</span>
+              <div className="relative cursor-pointer" onClick={(e) => { e.stopPropagation(); setIsDropdownOpen(!isDropdownOpen); }}>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-primary hidden sm:block">
+                    {userRole || 'Not logged in'}
+                  </span>
+                  <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center border border-primary overflow-hidden ml-2">
+                    <span className="material-symbols-outlined text-on-primary-container">person</span>
+                  </div>
+                </div>
+                {userRole && isDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                    <button 
+                      onClick={handleLogout}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Sign out
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

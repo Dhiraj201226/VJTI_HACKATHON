@@ -1,16 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getRagStats } from '../api/client';
+import { getRagStats, getDraftHistory } from '../api/client';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ total_points_ingested: 0 });
+  const [history, setHistory] = useState([]);
 
   useEffect(() => {
     getRagStats()
       .then(data => {
         if (data.status === 'success') {
           setStats(data);
+        }
+      })
+      .catch(console.error);
+
+    getDraftHistory()
+      .then(data => {
+        if (data.status === 'success') {
+          setHistory(data.history);
         }
       })
       .catch(console.error);
@@ -26,10 +35,12 @@ export default function Dashboard() {
             Streamline Maharashtra Government Resolutions with AI-powered semantic alignment and conflict detection. Ensure legal consistency across all departments in real-time.
           </p>
           <div className="flex flex-wrap gap-4">
-            <button onClick={() => navigate('/create')} className="bg-surface-container-lowest text-primary px-6 py-2.5 rounded-lg font-bold hover:bg-primary-fixed-dim transition-colors flex items-center gap-2">
-              <span className="material-symbols-outlined">add</span>
-              Create New GR
-            </button>
+            {userRole === 'Desk Officer' && (
+              <button onClick={() => navigate('/create')} className="bg-surface-container-lowest text-primary px-6 py-2.5 rounded-lg font-bold hover:bg-primary-fixed-dim transition-colors flex items-center gap-2">
+                <span className="material-symbols-outlined">add</span>
+                Create New GR
+              </button>
+            )}
             <button onClick={() => navigate('/chat')} className="border border-white text-white px-6 py-2.5 rounded-lg font-bold hover:bg-white/10 transition-colors flex items-center gap-2">
               <span className="material-symbols-outlined">gavel</span>
               Legal Chat
@@ -42,13 +53,21 @@ export default function Dashboard() {
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter mt-6">
         <div className="bg-surface-container-lowest border border-outline-variant p-stack-md rounded-lg flex flex-col gap-1">
           <div className="flex justify-between items-center mb-1">
-            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Total GRs Ingested</span>
+            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Unique GRs Ingested</span>
             <span className="material-symbols-outlined text-primary">public</span>
           </div>
-          <div className="font-h2 text-h2 text-on-surface">{stats.total_points_ingested.toLocaleString()}</div>
-          <div className="text-body-sm text-green-600 flex items-center gap-1">
-            <span className="material-symbols-outlined text-[14px]">check_circle</span>
-            <span>Qdrant DB Active</span>
+          <div className="font-h2 text-h2 text-on-surface">
+            {stats.total_grs_processed ? stats.total_grs_processed.toLocaleString() : "0"}
+          </div>
+          <div className="text-body-sm text-green-600 flex items-center justify-between gap-1 mt-1">
+            <span className="flex items-center gap-1">
+              <span className="material-symbols-outlined text-[14px]">database</span>
+              <span>{stats.total_points_ingested ? stats.total_points_ingested.toLocaleString() : "0"} chunks</span>
+            </span>
+            <span className="text-error flex items-center gap-1" title="Garbage files skipped by AI Classifier">
+              <span className="material-symbols-outlined text-[14px]">delete</span>
+              <span>{stats.total_grs_skipped_by_ai ? stats.total_grs_skipped_by_ai.toLocaleString() : "0"} skipped</span>
+            </span>
           </div>
         </div>
         <div className="bg-surface-container-lowest border border-outline-variant p-stack-md rounded-lg flex flex-col gap-1">
@@ -92,43 +111,33 @@ export default function Dashboard() {
               <table className="w-full text-left">
                 <thead className="bg-on-primary-fixed text-white font-label-caps text-[11px] uppercase tracking-wider">
                   <tr>
-                    <th className="px-6 py-3">Document Title</th>
+                    <th className="px-6 py-3">GR No</th>
                     <th className="px-6 py-3">Department</th>
-                    <th className="px-6 py-3">Generated Date</th>
-                    <th className="px-6 py-3">Action</th>
+                    <th className="px-6 py-3">Topic</th>
+                    <th className="px-6 py-3 text-right">PDF</th>
                   </tr>
                 </thead>
                 <tbody className="text-body-sm divide-y divide-outline-variant">
-                  <tr className="hover:bg-surface-container-high transition-colors">
-                    <td className="px-6 py-3 font-semibold text-primary">GR-IT-2024-045.pdf</td>
-                    <td className="px-6 py-3">IT &amp; Communication</td>
-                    <td className="px-6 py-3">2 hours ago</td>
-                    <td className="px-6 py-3">
-                      <button className="text-secondary hover:text-primary transition-colors">
-                        <span className="material-symbols-outlined">download</span>
-                      </button>
-                    </td>
-                  </tr>
-                  <tr className="bg-surface-container-low hover:bg-surface-container-high transition-colors">
-                    <td className="px-6 py-3 font-semibold text-primary">GR-EDU-SCHEME-11.pdf</td>
-                    <td className="px-6 py-3">School Education</td>
-                    <td className="px-6 py-3">Yesterday</td>
-                    <td className="px-6 py-3">
-                      <button className="text-secondary hover:text-primary transition-colors">
-                        <span className="material-symbols-outlined">download</span>
-                      </button>
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-surface-container-high transition-colors">
-                    <td className="px-6 py-3 font-semibold text-primary">GR-FIN-BUDGET-92.pdf</td>
-                    <td className="px-6 py-3">Finance Department</td>
-                    <td className="px-6 py-3">Nov 18, 2024</td>
-                    <td className="px-6 py-3">
-                      <button className="text-secondary hover:text-primary transition-colors">
-                        <span className="material-symbols-outlined">download</span>
-                      </button>
-                    </td>
-                  </tr>
+                  {history.length > 0 ? (
+                    history.map((gr, index) => (
+                      <tr key={gr.id || index} className={`${index % 2 === 1 ? 'bg-surface-container-low ' : ''}hover:bg-surface-container-high transition-colors`}>
+                        <td className="px-6 py-3 font-semibold text-primary">{gr.gr_number}</td>
+                        <td className="px-6 py-3">{gr.department}</td>
+                        <td className="px-6 py-3">{gr.subject}</td>
+                        <td className="px-6 py-3 text-right">
+                          <a href={`http://localhost:8000${gr.pdf_url || gr.pdf_path?.replace('./data/output', '/api/download')}?t=${Date.now()}`} target="_blank" rel="noreferrer" className="text-secondary hover:text-primary transition-colors inline-block">
+                            <span className="material-symbols-outlined">picture_as_pdf</span>
+                          </a>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="4" className="px-6 py-6 text-center text-on-surface-variant">
+                        No GRs generated yet.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

@@ -29,7 +29,12 @@ export default function DocumentPreview({ draftState }) {
       setLegalResult(result);
     } catch (error) {
       console.error("Legal review failed:", error);
-      setLegalResult({ is_valid: false, violations: ["Error connecting to Legal API"] });
+      setLegalResult({ 
+        is_valid: false, 
+        violations: ["Server/API Error"],
+        analysis: error.response?.data?.detail || error.message || "Failed to reach server.",
+        recommendation: "Check backend logs or console."
+      });
     } finally {
       setIsReviewing(false);
     }
@@ -62,42 +67,45 @@ export default function DocumentPreview({ draftState }) {
       <div className="flex flex-1 overflow-hidden">
         {/* Editor Panel (70%) */}
         <section className="w-full lg:w-[70%] overflow-y-auto p-8 flex flex-col items-center">
-          <div className="bg-white shadow-md border border-outline-variant w-[210mm] min-h-[297mm] p-[25mm] font-document-text text-on-surface leading-relaxed text-lg">
-            {/* Header */}
-            <div className="text-center mb-12">
-              <img className="w-16 h-16 mx-auto mb-4 object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmo0MjyHYoX5jRhX7RDGVXen8paQIhImmLlh87xD7CQdJSaqS8305l7BPhZvugp2MUH7ikvjU_ZG1hg2d7Qk2thkNVTPVdwRZLwmbQjwfsNXzBGTXjSR-MpR8_Jb4er0nF1zBF3_XzTVnSb8bdKFW-0AFxf0ieIxRXybKjFsBK7cNbxn_m7YdoVYGpp4_tJfX1VQpvrrwCbNtt20ZIvEaKvuQHVk28Xzax3OU3YOpayJ2BHWIFZjwQD3M41npIm5BqoQ" alt="Emblem" />
-              <h2 className="text-xl font-bold uppercase tracking-wide">Government of Maharashtra</h2>
-              <h3 className="text-lg font-bold">{fields.department}</h3>
-              <div className="w-32 h-px bg-black mx-auto my-4"></div>
-              <h4 className="text-md font-bold mb-6">Government Resolution No: {fields.gr_number || "___-202X/CR-___/AD-__"}</h4>
-              <p className="text-right">Mantralaya, Mumbai 400 032<br/>Date: {fields.date || new Date().toLocaleDateString()}</p>
-            </div>
-
-            {/* Subject */}
-            <div className="mb-8">
-              <p className="font-bold inline">Subject: </p>
-              <div className="inline-block outline-none min-w-[200px]" contentEditable="true">
-                {fields.subject}
-              </div>
-            </div>
-
-            {/* Sections */}
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <h5 className="font-bold underline uppercase">Reference:</h5>
-                <div className="min-h-[40px] outline-none" contentEditable="true">
-                  {fields.references?.map((ref, idx) => (
-                    <div key={idx}>{idx + 1}. {ref}</div>
-                  ))}
+          <div className="bg-white mx-auto shadow-2xl overflow-hidden" style={{ width: '210mm', minHeight: '297mm', fontFamily: '"Noto Sans Devanagari", "Mangal", "Arial Unicode MS", serif' }}>
+            <div className="p-[20mm]">
+              {/* Header */}
+              <div className="text-center mb-10">
+                <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmo0MjyHYoX5jRhX7RDGVXen8paQIhImmLlh87xD7CQdJSaqS8305l7BPhZvugp2MUH7ikvjU_ZG1hg2d7Qk2thkNVTPVdwRZLwmbQjwfsNXzBGTXjSR-MpR8_Jb4er0nF1zBF3_XzTVnSb8bdKFW-0AFxf0ieIxRXybKjFsBK7cNbxn_m7YdoVYGpp4_tJfX1VQpvrrwCbNtt20ZIvEaKvuQHVk28Xzax3OU3YOpayJ2BHWIFZjwQD3M41npIm5BqoQ" alt="Emblem" className="w-16 h-16 mx-auto mb-2 opacity-80 object-contain" />
+                <h1 className="font-h3 text-h3 uppercase tracking-widest font-bold">Government of Maharashtra</h1>
+                <h2 className="font-h4 text-h4 mt-2">{fields.department}</h2>
+                <div className="mt-4 text-sm font-medium">
+                  <p>Government Resolution No: {fields.gr_number}</p>
+                  <p>Mantralaya, Mumbai 400 032</p>
+                  <p>Date: {fields.date}</p>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <h5 className="font-bold underline uppercase">Background:</h5>
-                <div className="min-h-[80px] outline-none" contentEditable="true">
-                  {fields.body?.map((para, idx) => (
-                    <p key={idx} className="mb-2 text-justify">{para}</p>
-                  ))}
+              {/* Body */}
+              <div className="space-y-6 text-[11pt] leading-relaxed">
+                <div className="text-center">
+                  <h4 className="font-bold underline uppercase mb-2">Subject:</h4>
+                  <p className="font-bold text-lg px-12">{fields.subject}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <h5 className="font-bold underline uppercase">Reference:</h5>
+                  <div className="min-h-[50px] outline-none" contentEditable="true">
+                    <ul className="list-disc ml-6 space-y-1">
+                      {fields.references?.map((ref, idx) => (
+                        <li key={idx}>{ref}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h5 className="font-bold underline uppercase">Background:</h5>
+                  <div className="min-h-[100px] outline-none" contentEditable="true">
+                    {fields.body?.map((para, idx) => (
+                      <p key={idx} className="mb-2 text-justify">{para}</p>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -148,14 +156,36 @@ export default function DocumentPreview({ draftState }) {
               <p className="text-body-sm text-on-surface-variant">
                 Verify if this drafted GR violates any Indian laws or constitutional principles using the AI Legal Advisor.
               </p>
-              <button 
-                onClick={handleLegalReview}
-                disabled={isReviewing}
-                className="w-full bg-primary hover:bg-primary-container text-white font-bold py-2 px-4 rounded transition-colors text-sm flex items-center justify-center gap-2"
-              >
-                <span className="material-symbols-outlined text-lg">gavel</span>
-                {isReviewing ? "Reviewing..." : "Run Legal Review"}
-              </button>
+              {/* Action Buttons */}
+              <div className="flex gap-4">
+                <button 
+                  onClick={handleLegalReview}
+                  disabled={isReviewing}
+                  className="flex-1 bg-surface-container-high border-2 border-outline rounded-lg p-4 flex flex-col items-center justify-center gap-2 hover:bg-surface-container-highest transition-colors disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-3xl text-primary">
+                    {isReviewing ? 'hourglass_empty' : 'gavel'}
+                  </span>
+                  <span className="font-bold text-on-surface">
+                    {isReviewing ? 'Analyzing...' : 'Run Legal Review'}
+                  </span>
+                </button>
+
+                <button 
+                  onClick={() => {
+                    alert("Success! The draft has been securely forwarded to the Deputy Secretary's Approval Queue.");
+                    window.location.href = "/";
+                  }}
+                  className="flex-1 bg-primary text-white border-2 border-primary rounded-lg p-4 flex flex-col items-center justify-center gap-2 hover:brightness-110 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-3xl">
+                    send
+                  </span>
+                  <span className="font-bold">
+                    Forward to Deputy Secy
+                  </span>
+                </button>
+              </div>
 
               {legalResult && (
                 <div className={`mt-4 p-4 rounded-lg border ${legalResult.is_valid ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
