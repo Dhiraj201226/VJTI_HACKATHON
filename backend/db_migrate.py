@@ -18,7 +18,12 @@ try:
         ("sha256_hash", "VARCHAR"),
         ("desk_officer_notes", "VARCHAR"),
         ("deputy_secy_notes", "VARCHAR"),
-        ("secy_notes", "VARCHAR")
+        ("secy_notes", "VARCHAR"),
+        ("draft_json", "VARCHAR"),
+        ("current_hash", "VARCHAR"),
+        ("desk_officer_hash", "VARCHAR"),
+        ("deputy_secy_hash", "VARCHAR"),
+        ("priority", "VARCHAR DEFAULT 'Standard'")
     ]
     
     for col_name, col_type in columns_to_add:

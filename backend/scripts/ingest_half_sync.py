@@ -101,6 +101,10 @@ def ingest_pipeline():
                     max_gr_in_batch = max(c.gr_no for c in current_batch)
                     progress_file.parent.mkdir(parents=True, exist_ok=True)
                     progress_file.write_text(str(max_gr_in_batch))
+                    
+                    stats_file = BASE_DIR / "data" / "ingestion_stats.json"
+                    import json
+                    stats_file.write_text(json.dumps({"total_grs": len(processed_grs), "ai_skipped": 0}))
 
                     print(f"[OK] Ingested up to GR {max_gr_in_batch} | Total Chunks: {uploaded_chunks}")
                 except Exception as e:

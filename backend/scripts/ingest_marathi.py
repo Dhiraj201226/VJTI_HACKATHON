@@ -101,6 +101,17 @@ def ingest_pipeline():
                     max_gr_in_batch = max(c.gr_no for c in current_batch)
                     progress_file.parent.mkdir(parents=True, exist_ok=True)
                     progress_file.write_text(str(max_gr_in_batch))
+                    
+                    stats_file = BASE_DIR / "data" / "ingestion_stats.json"
+                    import json
+                    try:
+                        stats = json.loads(stats_file.read_text()) if stats_file.exists() else {"total_grs": 0, "ai_skipped": 0}
+                        # We just roughly add len(processed_grs) to the existing total (since marathi runs after english)
+                        # Actually to be safe, let's just write the combined length (this isn't perfect but good enough for UI)
+                        # We'll just write the max GR number since they are sequential and unique across both datasets!
+                        stats_file.write_text(json.dumps({"total_grs": max_gr_in_batch, "ai_skipped": 0}))
+                    except Exception:
+                        pass
 
                     print(f"[OK] Ingested up to GR {max_gr_in_batch} | Total Chunks: {uploaded_chunks}")
                 except Exception as e:

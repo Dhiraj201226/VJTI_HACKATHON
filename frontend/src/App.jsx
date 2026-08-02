@@ -11,6 +11,7 @@ import Login from './pages/Login';
 import ApprovalQueue from './pages/ApprovalQueue';
 import VerifyGR from './pages/VerifyGR';
 import DocumentVerifier from './pages/DocumentVerifier';
+import VersionControl from './pages/VersionControl';
 
 function App() {
   const [draftState, setDraftState] = useState(() => {
@@ -52,6 +53,7 @@ function App() {
             <Route path="/faq" element={<FAQ />} />
             <Route path="/queue" element={<ApprovalQueue userRole={userRole} />} />
             <Route path="/verify" element={<DocumentVerifier />} />
+            <Route path="/versions" element={<VersionControl />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </Layout>

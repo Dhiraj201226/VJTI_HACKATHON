@@ -64,7 +64,7 @@ const ApprovalQueue = ({ userRole }) => {
       parsed.template_fields.clauses = editForm.clauses.split('\n\n');
       parsed.template_fields.financial_implications = editForm.financial_implications;
 
-      await fetch(`http://localhost:8000/api/draft/${selectedGR.id}/edit`, {
+      await fetch(`http://localhost:8080/api/draft/${selectedGR.id}/edit`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -85,14 +85,14 @@ const ApprovalQueue = ({ userRole }) => {
   const handleAction = async () => {
     try {
       if (userRole === 'Deputy Secretary') {
-        await fetch(`http://localhost:8000/api/draft/${selectedGR.id}/review`, {
+        await fetch(`http://localhost:8080/api/draft/${selectedGR.id}/review`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ notes })
         });
         alert('Forwarded to Secretary');
       } else if (userRole === 'Secretary') {
-        await fetch(`http://localhost:8000/api/draft/${selectedGR.id}/approve`, {
+        await fetch(`http://localhost:8080/api/draft/${selectedGR.id}/approve`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ notes })
@@ -137,7 +137,7 @@ const ApprovalQueue = ({ userRole }) => {
             <p><strong>Department:</strong> {selectedGR.department}</p>
             <p><strong>Subject:</strong> {selectedGR.subject}</p>
             <p className="mt-2 text-sm">
-              <a href={`http://localhost:8000${selectedGR.pdf_url}`} target="_blank" rel="noreferrer" className="text-blue-600 underline font-bold">
+              <a href={`http://localhost:8080${selectedGR.pdf_url}`} target="_blank" rel="noreferrer" className="text-blue-600 underline font-bold">
                 View Current Draft PDF
               </a>
             </p>

@@ -19,7 +19,7 @@ export default function DocumentPreview({ draftState }) {
 
   const { json_data, docx_url, pdf_url } = finalResult;
   const fields = json_data.template_fields;
-  const baseUrl = "http://localhost:8000"; // Should be env var
+  const baseUrl = "http://localhost:8080"; // Should be env var
 
   const handleLegalReview = async () => {
     setIsReviewing(true);

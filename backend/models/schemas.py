@@ -4,6 +4,7 @@ from typing import List, Optional, Dict, Any
 class DraftRequest(BaseModel):
     objective: str
     language: Optional[str] = "Marathi"
+    priority: str = "Standard"
 
 class Conflict(BaseModel):
     conflict_id: str
@@ -21,6 +22,7 @@ class GenerateRequest(BaseModel):
     objective: str
     officer_decisions: List[OfficerDecision] = []
     language: Optional[str] = "Marathi"
+    priority: str = "Standard"
 
 class Reference(BaseModel):
     gr_number: str

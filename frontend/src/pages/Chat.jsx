@@ -36,7 +36,7 @@ export default function Chat() {
         content: msg.content
       }));
 
-      const res = await axios.post('http://localhost:8000/chat', {
+      const res = await axios.post('http://localhost:8080/chat', {
         query: userMessage.content,
         history: historyPayload,
         top_k: 5

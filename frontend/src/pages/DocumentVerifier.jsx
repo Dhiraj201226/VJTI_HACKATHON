@@ -31,7 +31,7 @@ const DocumentVerifier = () => {
       setStatus('verifying');
       
       // Ping backend to check if hash exists in db
-      const response = await fetch(`http://localhost:8000/api/verify/${fileHash}`);
+      const response = await fetch(`http://localhost:8080/api/verify/${fileHash}`);
       const data = await response.json();
       
       if (response.ok && data.status === 'success') {

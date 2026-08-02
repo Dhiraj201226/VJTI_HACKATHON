@@ -125,7 +125,7 @@ export default function Dashboard({ userRole }) {
                         <td className="px-6 py-3">{gr.department}</td>
                         <td className="px-6 py-3">{gr.subject}</td>
                         <td className="px-6 py-3 text-right">
-                          <a href={`http://localhost:8000${gr.pdf_url || gr.pdf_path?.replace('./data/output', '/api/download')}?t=${Date.now()}`} target="_blank" rel="noreferrer" className="text-secondary hover:text-primary transition-colors inline-block">
+                          <a href={`http://localhost:8080${gr.pdf_url || gr.pdf_path?.replace('./data/output', '/api/download')}?t=${Date.now()}`} target="_blank" rel="noreferrer" className="text-secondary hover:text-primary transition-colors inline-block">
                             <span className="material-symbols-outlined">picture_as_pdf</span>
                           </a>
                         </td>

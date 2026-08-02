@@ -19,4 +19,7 @@ class GeneratedGR(Base):
     secy_notes = Column(String, nullable=True)
     draft_json = Column(String, nullable=True)
     current_hash = Column(String, nullable=True)
+    desk_officer_hash = Column(String, nullable=True)
+    deputy_secy_hash = Column(String, nullable=True)
+    priority = Column(String, default="Standard")
     created_at = Column(DateTime, default=datetime.utcnow)

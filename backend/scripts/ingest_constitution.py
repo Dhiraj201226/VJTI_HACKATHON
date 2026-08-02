@@ -13,7 +13,7 @@ QDRANT_HOST = "127.0.0.1"
 QDRANT_PORT = 6333
 COLLECTION_NAME = "constitution"
 
-client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
+client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT, timeout=60)
 
 # Ensure Collection exists
 try:

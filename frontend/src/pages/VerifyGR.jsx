@@ -20,7 +20,7 @@ const VerifyGR = () => {
       const formData = new FormData();
       formData.append('file', file);
       
-      const response = await fetch('http://localhost:8000/api/draft/verify', {
+      const response = await fetch('http://localhost:8080/api/draft/verify', {
         method: 'POST',
         body: formData,
       });

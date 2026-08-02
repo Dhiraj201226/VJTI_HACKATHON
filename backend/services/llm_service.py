@@ -24,10 +24,11 @@ OFFICER CONFLICT DECISIONS:
 DRAFTING RULES:
 1. Maintain formal government writing style in {language.upper()}.
 2. The document engine will place your outputs into an official template.
-3. You must decide what content belongs in which placeholder.
+3. YOU MUST STRICTLY FOLLOW the objective requested by the user, especially any FINANCIAL FIGURES (e.g., 10 crores), NAMES, or LOCATIONS. Do not hallucinate different numbers or ignore user instructions.
 4. Do NOT include placeholder tags in your text.
 5. Return ONLY a JSON object that perfectly matches the structure below.
-6. TRANSLATE everything to {language.upper()} before outputting the JSON.
+6. AUTO-GENERATED REFERENCES: You MUST automatically extract the GR Numbers, Departments, and Dates from the RETRIEVED CONTEXT and construct the 'references' array in `template_fields` formatting them as standard official references. If no references can be extracted from the RETRIEVED CONTEXT because the data is not found, you MUST explicitly output ["No references found in context"] for the references array. Do NOT hallucinate or hardcode fake references.
+7. TRANSLATE everything to {language.upper()} before outputting the JSON.
 
 EXPECTED JSON STRUCTURE:
 {{
@@ -95,38 +96,6 @@ def generate_gr_json(objective: str, retrieved_chunks: dict, officer_decisions: 
     
     content = response.choices[0].message.content
     parsed_json = json.loads(content)
-    
-    if language.lower() == "marathi":
-        print("Translating JSON to Marathi...")
-        translate_prompt = f"""
-You are a master Marathi translator. 
-Translate the string values of the following JSON into pure Marathi (Devanagari script).
-DO NOT change the JSON keys. Keep the exact same structure.
-ONLY translate the following keys inside template_fields: department, subject, references (array), body (array), clauses (array), financial_implications, implementation, signature, designation, footer.
-
-JSON to translate:
-{json.dumps(parsed_json, indent=2)}
-"""
-        translate_response = client.chat.completions.create(
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You output ONLY valid JSON in the exact same structure as provided, but with values translated to Marathi."
-                },
-                {
-                    "role": "user",
-                    "content": translate_prompt
-                }
-            ],
-            model=settings.LLM_MODEL,
-            response_format={"type": "json_object"},
-            temperature=0.1
-        )
-        try:
-            translated_content = translate_response.choices[0].message.content
-            parsed_json = json.loads(translated_content)
-        except Exception as e:
-            print("Translation failed, falling back to original JSON.", e)
     
     # Validate and return using Pydantic
     return LLMDraftResponse(**parsed_json)

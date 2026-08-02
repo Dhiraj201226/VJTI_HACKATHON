@@ -67,11 +67,18 @@ from services.glossary_service import check_terminology
 @router.post("/draft/generate", response_model=FinalDraftResponse)
 def generate_draft(request: GenerateRequest):
     try:
-        # Re-retrieve or use passed context
-        results = get_qdrant_results_as_dict(request.objective, top_k=3)
+        # Re-retrieve or use passed context, blending objective with officer notes for better Qdrant retrieval
+        print("DEBUG: generate_draft called")
+        search_query = request.objective
+        if request.officer_decisions:
+            decisions_text = " ".join([d.justification for d in request.officer_decisions if d.justification])
+            search_query += " " + decisions_text
+            
+        print("DEBUG: Calling Qdrant...")
+        results = get_qdrant_results_as_dict(search_query, top_k=5)
         
         # 2. Generate Final Document using LLM
-        print("Generating Final GR...")
+        print("DEBUG: Generating Final GR via LLM...")
         json_response = generate_gr_json(request.objective, results, request.officer_decisions, language=request.language)
         
         # Phase 2.4: Template Enforcement Validation
@@ -125,14 +132,16 @@ def generate_draft(request: GenerateRequest):
                 docx_path=docx_path,
                 pdf_path=pdf_path,
                 draft_json=json_response.model_dump_json(),
-                current_hash=initial_hash
+                current_hash=initial_hash,
+                desk_officer_hash=initial_hash,
+                priority=request.priority
             )
             db.add(new_gr)
             db.commit()
             db.refresh(new_gr)
             gr_id = new_gr.id
         except Exception as e:
-            print(f"Error saving to SQLite database: {e}")
+            print(f"Error saving to SQLite database: {repr(e)}")
             db.rollback()
         finally:
             db.close()
@@ -163,7 +172,7 @@ def generate_draft(request: GenerateRequest):
             upload_chunks([chunk], [embedding])
             print(f"Successfully saved GR {fields.gr_number} to Qdrant")
         except Exception as e:
-            print(f"Error adding to RAG: {e}")
+            print(f"Error adding to RAG: {repr(e)}")
         
         return FinalDraftResponse(
             docx_url=f"/api/download/{os.path.basename(docx_path)}",
@@ -255,6 +264,9 @@ async def extract_text_from_pdf(file: UploadFile = File(...)):
         text = ""
         for page in doc:
             text += page.get_text()
+            if len(text) > 10000:
+                text = text[:10000] + "\n\n[TEXT TRUNCATED DUE TO LENGTH LIMITS...]"
+                break
         return {"status": "success", "extracted_text": text.strip()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -271,29 +283,41 @@ def ask_faq(request: FAQRequest):
 def get_draft_history():
     db = SessionLocal()
     try:
-        history = db.query(GeneratedGR).order_by(GeneratedGR.created_at.desc()).all()
-        history_list = []
-        for gr in history:
-            history_list.append({
+        grs = db.query(GeneratedGR).all()
+        
+        # Custom sort by priority (Critical > Urgent > Standard) then by created_at desc
+        priority_map = {"Critical": 1, "Urgent": 2, "Standard": 3}
+        grs.sort(key=lambda x: (-x.created_at.timestamp() if x.created_at else 0)) # stable sort newest first
+        grs.sort(key=lambda x: priority_map.get(x.priority, 3)) # stable sort priority
+
+        history = []
+        for gr in grs:
+            history.append({
                 "id": gr.id,
                 "gr_number": gr.gr_number,
                 "department": gr.department,
                 "subject": gr.subject,
                 "date": gr.date,
                 "status": gr.status,
-                "pdf_path": gr.pdf_path,
-                "pdf_url": f"/api/download/{os.path.basename(gr.pdf_path)}" if gr.pdf_path else None,
                 "docx_url": f"/api/download/{os.path.basename(gr.docx_path)}" if gr.docx_path else None,
-                "created_at": gr.created_at.isoformat() if gr.created_at else None,
+                "pdf_url": f"/api/download/{os.path.basename(gr.pdf_path)}" if gr.pdf_path else None,
+                "desk_officer_notes": gr.desk_officer_notes,
+                "deputy_secy_notes": gr.deputy_secy_notes,
+                "secy_notes": gr.secy_notes,
                 "draft_json": gr.draft_json,
+                "priority": gr.priority,
                 "current_hash": gr.current_hash,
-                "ds_notes": gr.deputy_secy_notes
+                "desk_officer_hash": gr.desk_officer_hash,
+                "deputy_secy_hash": gr.deputy_secy_hash,
+                "created_at": gr.created_at.isoformat() if gr.created_at else None
             })
-        return {"status": "success", "history": history_list}
+        return {"status": "success", "history": history}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         db.close()
+    
+
 
 from pydantic import BaseModel
 
@@ -339,8 +363,11 @@ def edit_draft(gr_id: int, request: EditDraftRequest):
         note_entry = f"[{request.author_role}] Edited Document. New Hash: {new_hash[:8]}. Note: {request.notes}\n"
         if request.author_role == 'Deputy Secretary':
             gr.deputy_secy_notes = (gr.deputy_secy_notes or "") + note_entry
+            gr.deputy_secy_hash = new_hash
         else:
             gr.secy_notes = (gr.secy_notes or "") + note_entry
+            if gr.status == 'PENDING_DS_REVIEW':
+                gr.desk_officer_hash = new_hash
             
         db.commit()
         return {"status": "success", "message": "Draft edited, regenerated, and hash updated."}
@@ -390,10 +417,16 @@ def ds_review_gr(gr_id: int, request: ReviewRequest):
         gr = db.query(GeneratedGR).filter(GeneratedGR.id == gr_id).first()
         if not gr:
             raise HTTPException(status_code=404, detail="GR not found")
+        
         gr.status = "PENDING_SEC_APPROVAL"
         gr.deputy_secy_notes = request.notes
+        gr.deputy_secy_hash = gr.current_hash
+        
         db.commit()
         return {"status": "success", "message": "Forwarded to Secretary"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         db.close()
 
@@ -412,6 +445,7 @@ def secy_approve_gr(gr_id: int, request: ApproveRequest):
         if gr.pdf_path and os.path.exists(gr.pdf_path):
             file_hash = stamp_qr_and_hash(gr.pdf_path, gr.id)
             gr.sha256_hash = file_hash
+            gr.current_hash = file_hash  # Fix: Ensure current_hash tracks the final QR-stamped file!
             
         db.commit()
         return {"status": "success", "message": "Approved and Sealed", "hash": gr.sha256_hash}

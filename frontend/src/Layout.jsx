@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 
 export default function Layout({ children, userRole, setUserRole }) {
   const navigate = useNavigate();
@@ -57,10 +58,16 @@ export default function Layout({ children, userRole, setUserRole }) {
               </li>
             )}
             <li>
-              <button onClick={() => navigate('/chat')} className="w-full flex items-center gap-3 px-gutter py-3 text-on-surface-variant hover:bg-surface-container-high transition-all active:scale-95">
-                <span className="material-symbols-outlined">gavel</span>
-                <span className="font-body-sm text-body-sm">AI Legal Advisor</span>
-              </button>
+              <NavLink to="/chat" className={({isActive}) => `flex items-center gap-3 px-gutter py-3 transition-all ${isActive ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant hover:bg-surface-container-high'}`}>
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
+                <span className="font-body-sm text-body-sm">AI Chat</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/versions" className={({isActive}) => `flex items-center gap-3 px-gutter py-3 transition-all ${isActive ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant hover:bg-surface-container-high'}`}>
+                <span className="material-symbols-outlined">history</span>
+                <span className="font-body-sm text-body-sm">Version Control</span>
+              </NavLink>
             </li>
             <li>
               <button onClick={() => navigate('/faq')} className="w-full flex items-center gap-3 px-gutter py-3 text-on-surface-variant hover:bg-surface-container-high transition-all active:scale-95">

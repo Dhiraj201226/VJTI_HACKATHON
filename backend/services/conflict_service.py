@@ -31,15 +31,17 @@ def detect_conflicts(retrieved_chunks: Dict[str, Any]) -> List[Conflict]:
     If no conflicts, return [].
     
     Output exactly in this JSON format:
-    [
-      {{
-        "conflict_id": "unique string id",
-        "old_policy": "Description of policy A",
-        "latest_policy": "Description of policy B",
-        "reason": "Why they conflict",
-        "recommendation": "How the officer should resolve this"
-      }}
-    ]
+    {{
+      "conflicts": [
+        {{
+          "conflict_id": "unique string id",
+          "old_policy": "Description of policy A",
+          "latest_policy": "Description of policy B",
+          "reason": "Why they conflict",
+          "recommendation": "How the officer should resolve this"
+        }}
+      ]
+    }}
     """
     
     try:
