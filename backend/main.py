@@ -10,7 +10,7 @@ app = FastAPI(title="MAHA-GR ALIGN API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For hackathon, allow all
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
