@@ -425,7 +425,8 @@ async def verify_gr(file: UploadFile = File(...)):
         file_hash = hashlib.sha256(content).hexdigest()
         
         db = SessionLocal()
-        gr = db.query(GeneratedGR).filter(GeneratedGR.sha256_hash == file_hash).first()
+        from sqlalchemy import or_
+        gr = db.query(GeneratedGR).filter(or_(GeneratedGR.sha256_hash == file_hash, GeneratedGR.current_hash == file_hash)).first()
         db.close()
         
         if gr:
