@@ -8,12 +8,12 @@ export default function ConflictResolution({ draftState, setDraftState }) {
   const [decisions, setDecisions] = useState({});
   const [loading, setLoading] = useState(false);
 
-  const handleDecisionChange = (conflictId, policyChoice) => {
+  const handleDecisionChange = (conflictId, policyChoice, customText) => {
     setDecisions({
       ...decisions,
       [conflictId]: {
         selected_policy: policyChoice,
-        justification: "Officer approved recommended policy change."
+        justification: customText !== undefined ? customText : "Officer approved recommended policy change."
       }
     });
   };
@@ -100,7 +100,12 @@ export default function ConflictResolution({ draftState, setDraftState }) {
                 <span className="px-2 py-0.5 bg-error/10 text-error rounded font-label-caps text-label-caps font-bold">LOGICAL CONFLICT</span>
                 <span className="font-body-sm text-body-sm text-on-surface-variant">ID: {conflict.conflict_id}</span>
               </div>
-              <span className="px-3 py-1 bg-error-container text-on-error-container rounded font-label-caps text-label-caps font-bold">HIGH SEVERITY</span>
+              <div className="flex gap-2 items-center">
+                <span className="px-3 py-1 bg-orange-100 text-orange-800 rounded font-label-caps text-label-caps font-bold">
+                  SIMILARITY: {conflict.similarity_score || 0}%
+                </span>
+                <span className="px-3 py-1 bg-error-container text-on-error-container rounded font-label-caps text-label-caps font-bold">HIGH SEVERITY</span>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-outline-variant">
@@ -157,7 +162,7 @@ export default function ConflictResolution({ draftState, setDraftState }) {
                     <p className="text-body-sm font-medium">{conflict.recommendation}</p>
                   </div>
                   
-                  <div className="flex gap-4">
+                  <div className="flex gap-4 flex-wrap">
                     <label className={`flex-1 flex flex-col items-center p-4 border rounded cursor-pointer transition-colors ${decisions[conflict.conflict_id]?.selected_policy === 'old' ? 'border-primary bg-primary-container/5' : 'border-outline-variant hover:bg-surface-container-low'}`}>
                       <input 
                         type="radio" 
@@ -178,7 +183,36 @@ export default function ConflictResolution({ draftState, setDraftState }) {
                       <span className={`material-symbols-outlined mb-2 ${decisions[conflict.conflict_id]?.selected_policy === 'latest' ? 'text-primary' : 'text-on-surface-variant'}`}>upgrade</span>
                       <span className="text-body-sm font-bold text-center">Apply Proposed</span>
                     </label>
+                    <label className={`flex-1 flex flex-col items-center p-4 border rounded cursor-pointer transition-colors ${decisions[conflict.conflict_id]?.selected_policy === 'custom' ? 'border-primary bg-primary-container/5' : 'border-outline-variant hover:bg-surface-container-low'}`}>
+                      <input 
+                        type="radio" 
+                        name={conflict.conflict_id} 
+                        className="hidden"
+                        onChange={() => handleDecisionChange(conflict.conflict_id, 'custom', '')}
+                      />
+                      <span className={`material-symbols-outlined mb-2 ${decisions[conflict.conflict_id]?.selected_policy === 'custom' ? 'text-primary' : 'text-on-surface-variant'}`}>edit_note</span>
+                      <span className="text-body-sm font-bold text-center">Custom Resolution</span>
+                    </label>
                   </div>
+                  {decisions[conflict.conflict_id]?.selected_policy === 'custom' && (
+                    <div className="mt-4">
+                      <textarea
+                        className="w-full border border-outline-variant rounded p-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                        placeholder="Enter custom changes to apply..."
+                        rows="3"
+                        value={decisions[conflict.conflict_id]?.justification}
+                        onChange={(e) => {
+                          setDecisions({
+                            ...decisions,
+                            [conflict.conflict_id]: {
+                              selected_policy: 'custom',
+                              justification: e.target.value
+                            }
+                          });
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

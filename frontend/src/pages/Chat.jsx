@@ -60,6 +60,52 @@ export default function Chat() {
     }
   };
 
+  const handleSummarize = async () => {
+    if (messages.length <= 1 || loading) return;
+    setLoading(true);
+    try {
+      // Find all unique sources from the chat history
+      const allSources = [];
+      messages.forEach(m => {
+        if (m.sources) {
+          m.sources.forEach(s => {
+            if (!allSources.find(as => as.gr_no === s.gr_no)) {
+              allSources.push(s);
+            }
+          });
+        }
+      });
+
+      if (allSources.length === 0) {
+        setMessages((prev) => [...prev, { role: 'assistant', content: 'No GRs found in the chat to summarize.', sources: [] }]);
+        setLoading(false);
+        return;
+      }
+
+      const textToSummarize = allSources.map(s => `GR Number: ${s.gr_no}\nDepartment: ${s.department}\nText: ${s.text}`).join('\n\n---\n\n');
+      
+      const res = await axios.post('http://localhost:8080/api/chat/summarize', {
+        text: `Please provide a brief, distinct summary for each of the following Government Resolutions:\n\n${textToSummarize}`,
+        llm_provider: 'groq'
+      });
+      
+      const summaryMsg = {
+        role: 'assistant',
+        content: `**GR Summaries:**\n\n${res.data.summary}`,
+        sources: []
+      };
+      setMessages((prev) => [...prev, summaryMsg]);
+    } catch (err) {
+      console.error(err);
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: 'Sorry, failed to generate summary.', sources: [] }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)] -m-6 max-h-[900px] bg-background">
       {/* Header Section */}
@@ -75,6 +121,16 @@ export default function Chat() {
           <p className="text-on-surface-variant font-body-lg text-body-lg max-w-3xl">
             Query the archive of Maharashtra GRs for legal precedents, rules, and policy clarifications.
           </p>
+        </div>
+        <div className="flex gap-4">
+          <button 
+            onClick={handleSummarize}
+            disabled={messages.length <= 1 || loading}
+            className="flex items-center gap-2 px-4 py-2 bg-secondary text-white font-bold rounded shadow-sm hover:bg-secondary/90 disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined text-[18px]">summarize</span>
+            Summarize Chat
+          </button>
         </div>
       </header>
 
@@ -109,16 +165,15 @@ export default function Chat() {
                       </p>
                       <div className="flex flex-col gap-2">
                         {msg.sources.map((source, idx) => (
-                          <details key={idx} className={`rounded text-body-sm border overflow-hidden cursor-pointer group ${msg.role === 'user' ? 'bg-primary-fixed text-on-primary-fixed border-primary-fixed-dim' : 'bg-surface-container-low text-on-surface border-outline-variant'}`}>
-                            <summary className="p-3 font-bold hover:brightness-95 transition-colors flex items-center outline-none">
+                          <div key={idx} className={`rounded text-body-sm border overflow-hidden ${msg.role === 'user' ? 'bg-primary-fixed text-on-primary-fixed border-primary-fixed-dim' : 'bg-surface-container-low text-on-surface border-outline-variant'}`}>
+                            <div className="p-3 font-bold flex items-center border-b border-outline-variant/20">
                               <span className="mr-2 text-primary">GR {source.gr_no}</span> 
                               <span className="font-normal truncate flex-1 opacity-70">• {source.department}</span>
-                              <span className="material-symbols-outlined group-open:rotate-180 transition-transform">expand_more</span>
-                            </summary>
-                            <div className="p-4 border-t border-outline-variant/20 bg-surface-container-lowest text-[11px] leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap font-document-text opacity-90">
+                            </div>
+                            <div className="p-4 bg-surface-container-lowest text-sm leading-relaxed whitespace-pre-wrap font-document-text opacity-90">
                               {source.text}
                             </div>
-                          </details>
+                          </div>
                         ))}
                       </div>
                     </div>

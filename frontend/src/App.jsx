@@ -28,6 +28,14 @@ function App() {
     return localStorage.getItem('userRole') || null;
   });
 
+  const [llmProvider, setLlmProvider] = useState(() => {
+    return localStorage.getItem('llmProvider') || 'groq';
+  });
+
+  const [llmModel, setLlmModel] = useState(() => {
+    return localStorage.getItem('llmModel') || '';
+  });
+
   useEffect(() => {
     localStorage.setItem('draftState', JSON.stringify(draftState));
   }, [draftState]);
@@ -40,12 +48,20 @@ function App() {
     }
   }, [userRole]);
 
+  useEffect(() => {
+    localStorage.setItem('llmProvider', llmProvider);
+  }, [llmProvider]);
+
+  useEffect(() => {
+    localStorage.setItem('llmModel', llmModel);
+  }, [llmModel]);
+
   return (
     <BrowserRouter>
       {userRole ? (
         <Layout userRole={userRole} setUserRole={setUserRole}>
           <Routes>
-            <Route path="/" element={<Dashboard userRole={userRole} />} />
+            <Route path="/" element={<Dashboard userRole={userRole} llmProvider={llmProvider} setLlmProvider={setLlmProvider} llmModel={llmModel} setLlmModel={setLlmModel} />} />
             <Route path="/create" element={<DraftingPortal draftState={draftState} setDraftState={setDraftState} />} />
             <Route path="/conflicts" element={<ConflictResolution draftState={draftState} setDraftState={setDraftState} />} />
             <Route path="/result" element={<DocumentPreview draftState={draftState} />} />

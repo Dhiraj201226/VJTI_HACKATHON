@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getRagStats, getDraftHistory } from '../api/client';
+import { getRagStats, getDraftHistory, getAvailableModels } from '../api/client';
 
-export default function Dashboard({ userRole }) {
+export default function Dashboard({ userRole, llmProvider, setLlmProvider, llmModel, setLlmModel }) {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ total_points_ingested: 0 });
   const [history, setHistory] = useState([]);
+  const [availableModels, setAvailableModels] = useState([]);
 
   useEffect(() => {
     getRagStats()
@@ -24,6 +25,21 @@ export default function Dashboard({ userRole }) {
       })
       .catch(console.error);
   }, []);
+
+  useEffect(() => {
+    // Fetch dynamic models when provider changes
+    getAvailableModels(llmProvider)
+      .then(data => {
+        if (data.models) {
+          setAvailableModels(data.models);
+          // If current selected model is not in new list, reset it
+          if (llmModel && !data.models.includes(llmModel)) {
+              setLlmModel('');
+          }
+        }
+      })
+      .catch(console.error);
+  }, [llmProvider]);
 
   return (
     <>
@@ -49,54 +65,6 @@ export default function Dashboard({ userRole }) {
         </div>
       </section>
 
-      {/* Quick Stats Grid */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter mt-6">
-        <div className="bg-surface-container-lowest border border-outline-variant p-stack-md rounded-lg flex flex-col gap-1">
-          <div className="flex justify-between items-center mb-1">
-            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Unique GRs Ingested</span>
-            <span className="material-symbols-outlined text-primary">public</span>
-          </div>
-          <div className="font-h2 text-h2 text-on-surface">
-            {stats.total_grs_processed ? stats.total_grs_processed.toLocaleString() : "0"}
-          </div>
-          <div className="text-body-sm text-green-600 flex items-center justify-between gap-1 mt-1">
-            <span className="flex items-center gap-1">
-              <span className="material-symbols-outlined text-[14px]">database</span>
-              <span>{stats.total_points_ingested ? stats.total_points_ingested.toLocaleString() : "0"} chunks</span>
-            </span>
-            <span className="text-error flex items-center gap-1" title="Garbage files skipped by AI Classifier">
-              <span className="material-symbols-outlined text-[14px]">delete</span>
-              <span>{stats.total_grs_skipped_by_ai ? stats.total_grs_skipped_by_ai.toLocaleString() : "0"} skipped</span>
-            </span>
-          </div>
-        </div>
-        <div className="bg-surface-container-lowest border border-outline-variant p-stack-md rounded-lg flex flex-col gap-1">
-          <div className="flex justify-between items-center mb-1">
-            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Drafts in Progress</span>
-            <span className="material-symbols-outlined text-secondary">edit_note</span>
-          </div>
-          <div className="font-h2 text-h2 text-on-surface">3</div>
-          <div className="text-body-sm text-on-surface-variant">Modified today</div>
-        </div>
-        <div className="bg-surface-container-lowest border border-outline-variant p-stack-md rounded-lg flex flex-col gap-1">
-          <div className="flex justify-between items-center mb-1">
-            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Pending Review</span>
-            <span className="material-symbols-outlined text-amber-600">pending_actions</span>
-          </div>
-          <div className="font-h2 text-h2 text-on-surface">1</div>
-          <div className="text-body-sm text-amber-600 flex items-center gap-1">
-            <span>Awaiting signature</span>
-          </div>
-        </div>
-        <div className="bg-surface-container-lowest border border-outline-variant p-stack-md rounded-lg flex flex-col gap-1">
-          <div className="flex justify-between items-center mb-1">
-            <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Conflicts Prevented</span>
-            <span className="material-symbols-outlined text-error">shield</span>
-          </div>
-          <div className="font-h2 text-h2 text-on-surface">14</div>
-          <div className="text-body-sm text-on-surface-variant">AI Auto-resolved</div>
-        </div>
-      </section>
 
       {/* Bento Dashboard Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter mt-6">
@@ -146,9 +114,43 @@ export default function Dashboard({ userRole }) {
 
         {/* Notifications & Actions Sidebar */}
         <div className="lg:col-span-4 space-y-gutter">
-          {/* Quick Actions */}
+          {/* Quick Actions & Settings */}
           <div className="bg-surface-container-low border border-outline-variant rounded-lg p-6">
-            <h3 className="font-label-caps text-label-caps text-on-surface-variant uppercase mb-4">Quick Actions</h3>
+            <div className="flex flex-col gap-4 mb-4">
+                <div className="flex justify-between items-center">
+                    <h3 className="font-label-caps text-label-caps text-on-surface-variant uppercase">Quick Actions</h3>
+                    {/* LLM Provider Toggle */}
+                    <div className="flex items-center gap-2 bg-surface-container-lowest border border-outline-variant rounded-full p-1 text-xs">
+                        <button 
+                            onClick={() => setLlmProvider('groq')}
+                            className={`px-3 py-1 rounded-full transition-colors ${llmProvider === 'groq' ? 'bg-primary text-white font-bold' : 'text-on-surface-variant hover:text-on-surface'}`}
+                        >
+                            Groq API
+                        </button>
+                        <button 
+                            onClick={() => setLlmProvider('ollama')}
+                            className={`px-3 py-1 rounded-full transition-colors ${llmProvider === 'ollama' ? 'bg-primary text-white font-bold' : 'text-on-surface-variant hover:text-on-surface'}`}
+                        >
+                            Local Ollama
+                        </button>
+                    </div>
+                </div>
+                
+                {/* Dynamic Model Dropdown */}
+                <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-on-surface-variant">Select Model:</label>
+                    <select 
+                        value={llmModel} 
+                        onChange={(e) => setLlmModel(e.target.value)}
+                        className="bg-surface-container-lowest border border-outline-variant rounded-md p-2 text-sm focus:border-primary focus:outline-none"
+                    >
+                        <option value="">-- Default --</option>
+                        {availableModels.map(model => (
+                            <option key={model} value={model}>{model}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               {userRole === 'Desk Officer' && (
                 <button onClick={() => navigate('/create')} className="flex flex-col items-center justify-center gap-2 p-4 bg-surface-container-lowest border border-outline-variant rounded-lg hover:border-primary hover:text-primary transition-all">

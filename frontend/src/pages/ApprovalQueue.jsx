@@ -107,6 +107,26 @@ const ApprovalQueue = ({ userRole }) => {
     }
   };
 
+  const handleReject = async () => {
+    try {
+      if (!notes) {
+        alert("Please provide a reason for rejection in the notes field.");
+        return;
+      }
+      await fetch(`http://localhost:8080/api/draft/${selectedGR.id}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes })
+      });
+      alert('Draft rejected and sent back to Desk Officer.');
+      setSelectedGR(null);
+      setNotes('');
+      fetchQueue();
+    } catch (e) {
+      alert("Error rejecting draft");
+    }
+  };
+
   if (loading) return <div className="text-center py-10">Loading queue...</div>;
 
   return (
@@ -189,12 +209,20 @@ const ApprovalQueue = ({ userRole }) => {
                   placeholder="Enter official notes before forwarding/approving..."
                 ></textarea>
               </div>
-              <button 
-                onClick={handleAction}
-                className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700"
-              >
-                {userRole === 'Deputy Secretary' ? 'Clear & Forward to Secretary' : 'Approve & Seal GR'}
-              </button>
+              <div className="flex gap-2">
+                <button 
+                  onClick={handleAction}
+                  className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700 flex-1"
+                >
+                  {userRole === 'Deputy Secretary' ? 'Clear & Forward to Secretary' : 'Approve & Seal GR'}
+                </button>
+                <button 
+                  onClick={handleReject}
+                  className="bg-red-600 text-white px-4 py-2 rounded font-bold hover:bg-red-700 flex-1"
+                >
+                  Reject & Return to Desk
+                </button>
+              </div>
             </div>
           )}
         </div>

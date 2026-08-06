@@ -5,6 +5,8 @@ class DraftRequest(BaseModel):
     objective: str
     language: Optional[str] = "Marathi"
     priority: str = "Standard"
+    llm_provider: Optional[str] = "groq"
+    llm_model: Optional[str] = None
 
 class Conflict(BaseModel):
     conflict_id: str
@@ -12,6 +14,7 @@ class Conflict(BaseModel):
     latest_policy: str
     reason: str
     recommendation: str
+    similarity_score: Optional[int] = None
 
 class OfficerDecision(BaseModel):
     conflict_id: str
@@ -23,6 +26,8 @@ class GenerateRequest(BaseModel):
     officer_decisions: List[OfficerDecision] = []
     language: Optional[str] = "Marathi"
     priority: str = "Standard"
+    llm_provider: Optional[str] = "groq"
+    llm_model: Optional[str] = None
 
 class Reference(BaseModel):
     gr_number: str
@@ -52,12 +57,16 @@ class LLMDraftResponse(BaseModel):
     phase2_analysis: Optional[Dict[str, Any]] = None
 
 class FinalDraftResponse(BaseModel):
-    docx_url: str
+    status: str
     pdf_url: str
+    docx_url: str
     json_data: LLMDraftResponse
+    conflict_score: Optional[int] = None
 
 class FAQRequest(BaseModel):
     question: str
+    llm_provider: Optional[str] = "groq"
+    llm_model: Optional[str] = None
 
 class ReviewRequest(BaseModel):
     notes: str

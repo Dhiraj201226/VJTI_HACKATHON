@@ -304,7 +304,6 @@ export default function DraftingPortal({ draftState, setDraftState }) {
               </>
             )}
           </button>
-          <p className="text-center font-body-sm text-on-surface-variant mt-4">Drafting engine will analyze 142,000+ past GRs for semantic alignment.</p>
         </div>
       </div>
     </section>

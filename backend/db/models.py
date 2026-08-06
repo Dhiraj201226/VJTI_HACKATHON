@@ -22,4 +22,5 @@ class GeneratedGR(Base):
     desk_officer_hash = Column(String, nullable=True)
     deputy_secy_hash = Column(String, nullable=True)
     priority = Column(String, default="Standard")
+    conflict_score = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)

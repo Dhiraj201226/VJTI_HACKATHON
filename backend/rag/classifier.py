@@ -1,11 +1,15 @@
 import time
 import logging
+import requests
 from groq import Groq
 from config import settings
 from remap_departments import ALLOWED_DEPTS
 
 logger = logging.getLogger(__name__)
-client = Groq(api_key=settings.GROQ_API_KEY)
+
+# Change this to "ollama" if you want to use the local model
+PROVIDER = "ollama"
+groq_client = Groq(api_key=settings.GROQ_API_KEY)
 
 def classify_department_with_llm(gr_text: str, max_retries=3) -> str:
     """
@@ -34,14 +38,23 @@ def classify_department_with_llm(gr_text: str, max_retries=3) -> str:
     
     for attempt in range(max_retries):
         try:
-            response = client.chat.completions.create(
-                messages=messages,
-                model=settings.GROQ_MODEL,
-                temperature=0.0,  # 0 temperature for strict classification
-                max_tokens=50,
-            )
-            
-            raw_answer = response.choices[0].message.content.strip()
+            if PROVIDER == "ollama":
+                res = requests.post("http://localhost:11434/api/chat", json={
+                    "model": "gemma4:31b-cloud",
+                    "messages": messages,
+                    "stream": False,
+                    "options": {"temperature": 0.0, "num_predict": 50}
+                }, timeout=3000)
+                res.raise_for_status()
+                raw_answer = res.json()["message"]["content"].strip()
+            else:
+                response = groq_client.chat.completions.create(
+                    messages=messages,
+                    model=settings.GROQ_MODEL,
+                    temperature=0.0,
+                    max_tokens=50,
+                )
+                raw_answer = response.choices[0].message.content.strip()
             
             # Clean up potential markdown or bullet points from the model
             raw_answer = raw_answer.replace("- ", "").replace("*", "").strip()
@@ -58,10 +71,10 @@ def classify_department_with_llm(gr_text: str, max_retries=3) -> str:
             error_msg = str(e).lower()
             if "rate limit" in error_msg or "429" in error_msg:
                 wait_time = base_wait_time * (2 ** attempt)
-                logger.warning(f"Groq Rate Limit hit. Waiting {wait_time}s before retry {attempt+1}/{max_retries}")
+                logger.warning(f"Timeout/Rate Limit. Waiting {wait_time}s before retry {attempt+1}/{max_retries}")
                 time.sleep(wait_time)
             else:
-                logger.error(f"Groq API Error: {e}")
+                logger.error(f"API Error: {e}")
                 return None
                 
     return None

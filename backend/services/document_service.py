@@ -152,19 +152,97 @@ def generate_documents(json_data: LLMDraftResponse):
         print("Typst compile error:", e)
         # Fallback to fpdf or similar if it fails, but typst should work perfectly
         
-    # Create a dummy docx so the UI doesn't crash on download docx button
+    # Generate a real DOCX
     from docx import Document
-    doc = Document()
-    doc.add_paragraph("DOCX generation currently disabled. Please view the perfect PDF instead.")
-    doc.save(docx_path)
+    from docx.shared import Pt
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
     
+    doc = Document()
+    
+    # Set default font to Mangal for Marathi Unicode support
+    style = doc.styles['Normal']
+    font = style.font
+    font.name = 'Mangal'
+    
+    # Header
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = p.add_run(t_gov)
+    run.bold = True
+    run.font.size = Pt(16)
+    
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = p.add_run(str(fields.department))
+    run.bold = True
+    run.font.size = Pt(12)
+    
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = p.add_run(f"{t_gr_no} {str(fields.gr_number)}\n")
+    run.bold = True
+    p.add_run("Hutatma Rajguru Chowk, Madam Cama Road, Mantralaya, Mumbai-400 032\n")
+    run = p.add_run(f"{t_date} {str(fields.date)}")
+    run.bold = True
+    
+    # Subject
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    run = p.add_run(str(fields.subject))
+    run.bold = True
+    
+    # Reference
+    if fields.references:
+        p = doc.add_paragraph(t_ref)
+        p.runs[0].bold = True
+        for ref in ensure_list(fields.references):
+            doc.add_paragraph(str(ref))
+            
+    # Resolution
+    p = doc.add_paragraph(t_res)
+    p.runs[0].bold = True
+    
+    for b in ensure_list(fields.body):
+        doc.add_paragraph(str(b))
+        
+    for c in ensure_list(fields.clauses):
+        doc.add_paragraph(str(c))
+        
+    if fields.financial_implications:
+        p = doc.add_paragraph("Financial Implications: ")
+        p.runs[0].bold = True
+        p.add_run(str(fields.financial_implications))
+        
+    if fields.implementation:
+        p = doc.add_paragraph("Implementation: ")
+        p.runs[0].bold = True
+        p.add_run(str(fields.implementation))
+        
+    doc.add_paragraph()
+    
+    # Order
+    p = doc.add_paragraph(t_order)
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # Signature
+    p = doc.add_paragraph(f"Digitally signed by {str(fields.signature)}\nDate: {str(fields.date)}\n\n({str(fields.signature)})\n{str(fields.designation)}")
+    p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    
+    # Copy To
+    if copy_to_list:
+        p = doc.add_paragraph(t_copy)
+        p.runs[0].bold = True
+        for i, copy in enumerate(copy_to_list):
+            doc.add_paragraph(f"{i+1}) {str(copy)}")
+            
+    doc.save(docx_path)
     return docx_path, pdf_path
 
 import qrcode
 import hashlib
 
 def stamp_qr_and_hash(pdf_path: str, gr_id: int) -> str:
-    verification_url = f"http://localhost:5174/verify?id={gr_id}"
+    verification_url = f"http://localhost:5173/verify?id={gr_id}"
     
     qr = qrcode.QRCode(version=1, box_size=5, border=2)
     qr.add_data(verification_url)

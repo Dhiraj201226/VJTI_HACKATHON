@@ -17,11 +17,11 @@ except ImportError:
 from .classifier import classify_department_with_llm
 
 def extract_real_department(content_lines: list[str]) -> str:
-    # Scan the first 25 lines of the GR content to find the real department name
-    for line in content_lines[:25]:
+    # Scan the first 100 lines of the GR content to find the real department name
+    for line in content_lines[:100]:
         line_lower = line.lower()
-        if "department" in line_lower and "resolution" not in line_lower and "circular" not in line_lower:
-            if len(line.split()) <= 15:
+        if ("department" in line_lower or "विभाग" in line_lower) and "resolution" not in line_lower and "circular" not in line_lower and "निर्णय" not in line_lower:
+            if len(line.split()) <= 20:
                 return line.strip()
     return "Unknown Department"
 

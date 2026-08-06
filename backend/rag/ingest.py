@@ -25,8 +25,9 @@ def ingest_pipeline():
     STATS_FILE = BASE_DIR / "data" / "ingestion_stats.json"
     
     datasets = [
-        "half_sync.txt",
-        "marathi_half_sync.txt"
+        "english_half_sync.txt",
+        "marathi_half_sync.txt",
+        "scraped_grs_all.txt"
     ]
     
     BATCH_SIZE = 64

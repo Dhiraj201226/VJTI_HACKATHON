@@ -15,6 +15,24 @@ from db.models import GeneratedGR
 
 router = APIRouter()
 
+@router.get("/models")
+def get_models(provider: str = "groq"):
+    if provider == "groq":
+        return {"models": ["llama3-70b-8192", "llama3-8b-8192", "mixtral-8x7b-32768", "gemma-7b-it", "gemma4:31b-cloud"]}
+    elif provider == "ollama":
+        import requests
+        try:
+            res = requests.get("http://localhost:11434/api/tags", timeout=2)
+            if res.status_code == 200:
+                data = res.json()
+                models = [m["name"] for m in data.get("models", [])]
+                return {"models": models}
+        except Exception:
+            pass
+        return {"models": ["qwen2:1.5b", "llama3:8b", "qwen2:7b"]} # fallback
+    return {"models": []}
+
+
 def string_to_int(s: str) -> int:
     return int(hashlib.md5(s.encode()).hexdigest(), 16) % 10000000
 
@@ -22,15 +40,17 @@ def get_qdrant_results_as_dict(objective: str, top_k: int = 3):
     search_response = search_pipeline(objective, top_k=top_k)
     docs = []
     metas = []
+    scores = []
     for res in search_response.results:
         docs.append(res.text)
+        scores.append(res.score)
         metas.append({
             "gr_number": res.gr_no,
             "department": res.department,
-            "date": "2023-01-01", # Placeholder since Qdrant payload might not have date
-            "policy_area": res.department # Use department as policy area proxy
+            "date": "2023-01-01", 
+            "policy_area": res.department 
         })
-    return {"documents": [docs], "metadatas": [metas]}
+    return {"documents": [docs], "metadatas": [metas], "scores": [scores]}
 
 @router.post("/draft/initiate")
 def initiate_draft(request: DraftRequest):
@@ -41,7 +61,7 @@ def initiate_draft(request: DraftRequest):
         results = get_qdrant_results_as_dict(objective, top_k=3)
         
         # 2. Conflict detection
-        conflicts = detect_conflicts(results)
+        conflicts = detect_conflicts(results, provider=request.llm_provider, model=request.llm_model)
         
         # 3. If conflicts exist, return them for officer resolution
         if conflicts:
@@ -75,11 +95,15 @@ def generate_draft(request: GenerateRequest):
             search_query += " " + decisions_text
             
         print("DEBUG: Calling Qdrant...")
-        results = get_qdrant_results_as_dict(search_query, top_k=5)
+        results = get_qdrant_results_as_dict(search_query, top_k=2)
         
         # 2. Generate Final Document using LLM
         print("DEBUG: Generating Final GR via LLM...")
-        json_response = generate_gr_json(request.objective, results, request.officer_decisions, language=request.language)
+        json_response = generate_gr_json(request.objective, results, request.officer_decisions, language=request.language, provider=request.llm_provider, model=request.llm_model)
+        
+        # Force current date to prevent LLM hallucination
+        from datetime import date
+        json_response.template_fields.date = date.today().strftime('%d %B %Y')
         
         # Phase 2.4: Template Enforcement Validation
         template = json_response.template_fields
@@ -110,12 +134,21 @@ def generate_draft(request: GenerateRequest):
         # Generate Documents
         docx_path, pdf_path = generate_documents(json_response)
         
+        # Extract raw text from body and clauses for analysis
+        body_text = "\n".join(template.body) if isinstance(template.body, list) else str(template.body)
+        
+        # Calculate cosine similarity based conflict score
+        scores_list = results.get("scores", [[]])[0]
+        max_score = max(scores_list) if scores_list else 0.0
+        final_conflict_score = int(max_score * 100) if (hasattr(json_response, 'conflicts') and json_response.conflicts) else 0
+
         # Save to SQLite Database
         fields = json_response.template_fields
         db = SessionLocal()
         gr_id = 999
         try:
             import hashlib
+            import json
 
             # Calculate initial hash of the generated PDF
             sha256 = hashlib.sha256()
@@ -131,10 +164,13 @@ def generate_draft(request: GenerateRequest):
                 date=fields.date,
                 docx_path=docx_path,
                 pdf_path=pdf_path,
-                draft_json=json_response.model_dump_json(),
+                status="PENDING_DS_REVIEW",
+                priority=request.priority,
+                conflict_score=final_conflict_score,
+                desk_officer_notes="Draft generated successfully",
+                draft_json=json.dumps(json_response.dict()),
                 current_hash=initial_hash,
-                desk_officer_hash=initial_hash,
-                priority=request.priority
+                desk_officer_hash=initial_hash
             )
             db.add(new_gr)
             db.commit()
@@ -170,17 +206,26 @@ def generate_draft(request: GenerateRequest):
             
             embedding = get_embedding(doc_text)
             upload_chunks([chunk], [embedding])
-            print(f"Successfully saved GR {fields.gr_number} to Qdrant")
+            try:
+                print(f"Successfully saved GR {fields.gr_number} to Qdrant")
+            except UnicodeEncodeError:
+                print("Successfully saved GR to Qdrant (omitting GR number due to encoding)")
         except Exception as e:
-            print(f"Error adding to RAG: {repr(e)}")
+            try:
+                print(f"Error adding to RAG: {repr(e)}")
+            except UnicodeEncodeError:
+                print("Error adding to RAG (omitting details due to encoding)")
         
-        return FinalDraftResponse(
-            docx_url=f"/api/download/{os.path.basename(docx_path)}",
-            pdf_url=f"/api/download/{os.path.basename(pdf_path)}",
-            json_data=json_response
-        )
+        return {
+            "status": "success",
+            "pdf_url": f"/api/download/{os.path.basename(pdf_path)}",
+            "docx_url": f"/api/download/{os.path.basename(docx_path)}",
+            "json_data": json_response.dict(),
+            "conflict_score": final_conflict_score
+        }
     except Exception as e:
         import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=traceback.format_exc())
 
 from fastapi import Body
@@ -263,7 +308,25 @@ async def extract_text_from_pdf(file: UploadFile = File(...)):
         doc = fitz.open(stream=content, filetype="pdf")
         text = ""
         for page in doc:
-            text += page.get_text()
+            page_text = page.get_text().strip()
+            # If text is too short, assume it's a scanned page and use OCR
+            if len(page_text) < 50:
+                try:
+                    import pytesseract
+                    from PIL import Image
+                    import io
+                    
+                    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+                    
+                    pix = page.get_pixmap()
+                    img_bytes = pix.tobytes("png")
+                    img = Image.open(io.BytesIO(img_bytes))
+                    
+                    page_text = pytesseract.image_to_string(img, lang='mar+eng')
+                except Exception as e:
+                    print(f"OCR Failed for page: {e}")
+            
+            text += page_text + "\n"
             if len(text) > 10000:
                 text = text[:10000] + "\n\n[TEXT TRUNCATED DUE TO LENGTH LIMITS...]"
                 break
@@ -274,7 +337,7 @@ async def extract_text_from_pdf(file: UploadFile = File(...)):
 @router.post("/faq/ask")
 def ask_faq(request: FAQRequest):
     try:
-        answer = answer_faq(request.question)
+        answer = answer_faq(request.question, provider=request.llm_provider, model=request.llm_model)
         return {"answer": answer}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -299,6 +362,8 @@ def get_draft_history():
                 "subject": gr.subject,
                 "date": gr.date,
                 "status": gr.status,
+                "priority": getattr(gr, 'priority', 'Standard'),
+                "conflict_score": getattr(gr, 'conflict_score', 0),
                 "docx_url": f"/api/download/{os.path.basename(gr.docx_path)}" if gr.docx_path else None,
                 "pdf_url": f"/api/download/{os.path.basename(gr.pdf_path)}" if gr.pdf_path else None,
                 "desk_officer_notes": gr.desk_officer_notes,
@@ -452,6 +517,31 @@ def secy_approve_gr(gr_id: int, request: ApproveRequest):
     finally:
         db.close()
 
+@router.post("/draft/{gr_id}/reject")
+def reject_gr(gr_id: int, request: ReviewRequest):
+    db = SessionLocal()
+    try:
+        gr = db.query(GeneratedGR).filter(GeneratedGR.id == gr_id).first()
+        if not gr:
+            raise HTTPException(status_code=404, detail="GR not found")
+        
+        gr.status = "REJECTED"
+        note_entry = f"[Rejected] Note: {request.notes}\n"
+        
+        # Append note to the appropriate column based on current status
+        if gr.status == "PENDING_SEC_APPROVAL":
+            gr.secy_notes = (gr.secy_notes or "") + note_entry
+        else:
+            gr.deputy_secy_notes = (gr.deputy_secy_notes or "") + note_entry
+            
+        db.commit()
+        return {"status": "success", "message": "Draft rejected and sent back to Desk Officer"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
 @router.post("/draft/verify")
 async def verify_gr(file: UploadFile = File(...)):
     try:
@@ -477,5 +567,34 @@ async def verify_gr(file: UploadFile = File(...)):
                 "status": "tampered",
                 "message": "Warning: Document has been altered or is fake."
             }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class SummarizeRequest(BaseModel):
+    text: str
+    llm_provider: str = "groq"
+    llm_model: str = None
+
+@router.post("/chat/summarize")
+def summarize_text(request: SummarizeRequest):
+    try:
+        from services.llm_service import generate_summary
+        summary = generate_summary(request.text, provider=request.llm_provider, model=request.llm_model)
+        return {"summary": summary}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class TranslateRequest(BaseModel):
+    text: str
+    target_language: str
+    llm_provider: str = "groq"
+    llm_model: str = None
+
+@router.post("/draft/translate")
+def translate_document(request: TranslateRequest):
+    try:
+        from services.llm_service import translate_text
+        translation = translate_text(request.text, request.target_language, provider=request.llm_provider, model=request.llm_model)
+        return {"translation": translation}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { checkLegalCompliance } from '../api/client';
+import { checkLegalCompliance, translateDraft } from '../api/client';
 
 export default function DocumentPreview({ draftState }) {
   const navigate = useNavigate();
   const [isReviewing, setIsReviewing] = useState(false);
   const [legalResult, setLegalResult] = useState(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translationResult, setTranslationResult] = useState(null);
   const { finalResult } = draftState;
 
   if (!finalResult) {
@@ -17,7 +19,7 @@ export default function DocumentPreview({ draftState }) {
     );
   }
 
-  const { json_data, docx_url, pdf_url } = finalResult;
+  const { json_data, docx_url, pdf_url, conflict_score } = finalResult;
   const fields = json_data.template_fields;
   const baseUrl = "http://localhost:8080"; // Should be env var
 
@@ -40,14 +42,49 @@ export default function DocumentPreview({ draftState }) {
     }
   };
 
+  const handleTranslate = async (targetLang) => {
+    setIsTranslating(true);
+    setTranslationResult(null);
+    try {
+      // Just extract the raw text values from the JSON template fields for translation
+      const textToTranslate = Object.values(fields).flat().join('\n\n');
+      const result = await translateDraft(textToTranslate, targetLang);
+      setTranslationResult(result.translation);
+    } catch (error) {
+      console.error("Translation failed:", error);
+      setTranslationResult("Failed to translate document. Check console for errors.");
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
   return (
     <div className="flex flex-col flex-1 h-full -m-6">
       {/* TopNavBar Replacement (Inline for Editor) */}
       <header className="bg-surface-container-highest flex justify-between items-center px-gutter py-stack-sm w-full border-b border-outline-variant z-10">
         <div className="flex items-center gap-4">
           <span className="text-on-surface-variant font-medium font-body-md">Draft Editor</span>
+          <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs font-bold">
+            Conflict Score: {conflict_score !== undefined ? conflict_score : (json_data.conflicts ? json_data.conflicts.length : 0)}
+          </span>
         </div>
         <div className="flex items-center gap-4">
+          <div className="flex gap-2 mr-4 border-r pr-4">
+            <button 
+              onClick={() => handleTranslate('English')}
+              disabled={isTranslating}
+              className="text-primary font-bold text-sm hover:underline disabled:opacity-50"
+            >
+              Translate to English
+            </button>
+            <button 
+              onClick={() => handleTranslate('Marathi')}
+              disabled={isTranslating}
+              className="text-primary font-bold text-sm hover:underline disabled:opacity-50"
+            >
+              Translate to Marathi
+            </button>
+          </div>
           <a 
             href={`${baseUrl}${docx_url}`} download
             className="bg-white border border-outline-variant px-4 py-2 rounded text-body-sm font-medium hover:bg-surface-container-high transition-all flex items-center gap-2"
@@ -65,15 +102,27 @@ export default function DocumentPreview({ draftState }) {
 
       {/* Workspace */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Editor Panel (70%) */}
         <section className="w-full lg:w-[70%] overflow-y-auto p-8 flex flex-col items-center bg-surface-container-low">
-          <div className="w-full max-w-[210mm] h-[297mm] bg-white shadow-2xl overflow-hidden relative">
-            <iframe 
-              src={`${baseUrl}${pdf_url}#toolbar=0`} 
-              className="w-full h-full border-none"
-              title="GR PDF Preview"
-            />
-          </div>
+          {translationResult ? (
+            <div className="w-full max-w-[210mm] bg-white shadow-2xl p-8 mb-10 text-left whitespace-pre-wrap font-serif">
+              <h2 className="text-xl font-bold mb-4 border-b pb-2">Translated Document</h2>
+              {translationResult}
+              <button 
+                onClick={() => setTranslationResult(null)}
+                className="mt-6 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+              >
+                Close Translation
+              </button>
+            </div>
+          ) : (
+            <div className="w-full max-w-[210mm] h-[297mm] bg-white shadow-2xl overflow-hidden relative">
+              <iframe 
+                src={`${baseUrl}${pdf_url}#toolbar=0`} 
+                className="w-full h-full border-none"
+                title="GR PDF Preview"
+              />
+            </div>
+          )}
           <div className="text-center text-on-surface-variant font-label-caps opacity-50 my-10 uppercase tracking-widest">
               Exact formatting as generated by AI
           </div>

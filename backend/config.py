@@ -4,13 +4,16 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Force HuggingFace to completely offline mode so it doesn't crash when internet is off
+os.environ["HF_HUB_OFFLINE"] = "1"
+
 class Config:
     # App Settings
     PROJECT_NAME = "MAHA-GR ALIGN - RAG Engine"
     API_V1_STR = "/api/v1"
     
     # Dataset
-    DATASET_PATH = os.getenv("DATASET_PATH", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "mahGRs", "GR_combine", "english_all_mapped.txt"))
+    DATASET_PATH = os.getenv("DATASET_PATH", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "mahGRs", "GR_combine", "scraped_grs_all.txt"))
     
     # Qdrant Settings
     QDRANT_HOST = os.getenv("QDRANT_HOST", "127.0.0.1")

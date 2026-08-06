@@ -7,18 +7,30 @@ const apiClient = axios.create({
     }
 });
 
+export const getAvailableModels = async (provider) => {
+    const response = await apiClient.get(`/models?provider=${provider}`);
+    return response.data;
+};
+
 export const initiateDraft = async (params) => {
-    // Check if params is string (old way) or object (new way)
-    const data = typeof params === 'string' ? { objective: params, language: "Marathi" } : params;
+    const provider = localStorage.getItem('llmProvider') || 'groq';
+    const model = localStorage.getItem('llmModel') || '';
+    const data = typeof params === 'string' 
+        ? { objective: params, language: "Marathi", llm_provider: provider, llm_model: model } 
+        : { ...params, llm_provider: provider, llm_model: model };
     const response = await apiClient.post('/draft/initiate', data);
     return response.data;
 };
 
 export const generateDraft = async (objective, officerDecisions, language = "Marathi") => {
+    const provider = localStorage.getItem('llmProvider') || 'groq';
+    const model = localStorage.getItem('llmModel') || '';
     const response = await apiClient.post('/draft/generate', {
         objective,
         officer_decisions: officerDecisions,
-        language
+        language,
+        llm_provider: provider,
+        llm_model: model
     });
     return response.data;
 };
@@ -28,8 +40,19 @@ export const checkLegalCompliance = async (grJson) => {
     return response.data;
 };
 
+export const translateDraft = async (text, targetLanguage) => {
+  const response = await apiClient.post('/draft/translate', {
+    text: text,
+    target_language: targetLanguage,
+    llm_provider: 'groq'
+  });
+  return response.data;
+};
+
 export const askFAQ = async (question) => {
-    const response = await apiClient.post('/faq/ask', { question });
+    const provider = localStorage.getItem('llmProvider') || 'groq';
+    const model = localStorage.getItem('llmModel') || '';
+    const response = await apiClient.post('/faq/ask', { question, llm_provider: provider, llm_model: model });
     return response.data;
 };
 
